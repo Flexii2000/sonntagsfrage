@@ -202,6 +202,13 @@ Beim Bau dieses Projekts jeweils erst nach einem Fehlstart gefunden:
    `ObjectMapper`-Bean lässt sich nicht injizieren. Die **Annotationen**
    bleiben `com.fasterxml.jackson.annotation.*` — das ist kein Fehler.
 
+### ⚠️ Postgres 18: Volume gehört an `/var/lib/postgresql`
+Nicht an `/var/lib/postgresql/data`. Die 18er-Images legen die Daten in ein
+versionsspezifisches Unterverzeichnis und **verweigern den Start**, wenn direkt
+auf `.../data` gemountet wird — mit einer langen Meldung über `pg_upgrade`, die
+so klingt, als sei ein Upgrade schiefgegangen. Ist sie nicht; es ist der
+falsche Mountpunkt. Fällt bei einem `docker run` ohne Volume nicht auf.
+
 ### ⚠️ `orphanRemoval` + Unique-Index: erst flushen, dann neu anlegen
 `ReferenceDataLoader` löscht die alten Wahlergebnisse und legt sie neu an.
 Ohne `saveAndFlush()` dazwischen ordnet Hibernate die INSERTs vor die DELETEs

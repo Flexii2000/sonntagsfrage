@@ -13,7 +13,11 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-wahlen}
     volumes:
       # Named Volume, kein Bind-Mount — laeuft dadurch auch unter Snap-Docker.
-      - wahlen-db-data:/var/lib/postgresql/data
+      #
+      # Mountpunkt ist /var/lib/postgresql, NICHT .../data: die Postgres-18-Images
+      # legen die Daten in ein versionsspezifisches Unterverzeichnis und
+      # verweigern den Start, wenn stattdessen direkt auf .../data gemountet wird.
+      - wahlen-db-data:/var/lib/postgresql
     # Bewusst kein Port-Mapping: die Datenbank ist nur fuer die App da, und
     # 5432 ist auf dem Server ohnehin schon von Firefly belegt.
     healthcheck:
