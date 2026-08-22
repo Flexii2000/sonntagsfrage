@@ -231,6 +231,19 @@ eigenes, kurzes Fenster von 120 Tagen, damit sie die jüngste Bewegung nicht
 wegglätten. Wer hier schraubt: beide Stellen prüfen, `sigmaDays` steht im
 API-Feld `trend.sigmaDays` und wird im UI ausgewiesen.
 
+### ⚠️ Nach Änderungen am nginx-Snippet: Setup erneut laufen lassen
+`deploy/nginx-wahlen.conf` liegt im Repo, aktiv ist aber die Kopie unter
+`/etc/nginx/snippets/wahlen.conf`. Ein `git pull` allein ändert daran nichts.
+Übernehmen mit `sudo ~/services/sonntagsfrage/deploy/setup-sonntagsfrage.sh` —
+das Skript ist idempotent, kopiert das Snippet neu und lädt nginx.
+
+Die statischen Dateien stehen bewusst auf `no-cache` (immer revalidieren,
+in der Praxis 304 ohne Daten). Ein festes `max-age` wäre hier falsch: die
+Dateinamen tragen keine Versionskennung, weil `app.js` das Modul `chart.js`
+als statisches ES-Modul importiert und sich das nicht automatisch umschreiben
+lässt. Mit `max-age` trifft nach jedem Deploy bis zu eine Stunde lang neues
+HTML auf altes JavaScript.
+
 ### ⚠️ Lücken in der Kurve sind echt — sie werden überbrückt, nicht gefüllt
 Wo monatelang gar nicht befragt wurde (Bremen: 3 Umfragen im Jahr, Saarland:
 8 im Fenster), liefert die Glättung bewusst keinen Wert. Die API gibt dort
