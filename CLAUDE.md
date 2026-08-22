@@ -37,6 +37,8 @@ Spring Boot 4 + Postgres, ausgeliefert als Docker-Compose-Stack.
 ## Entwickeln
 
 ```bash
+colima start          # falls Docker lokal noch nicht läuft
+
 docker run -d --name wahlen-db-dev \
   -e POSTGRES_DB=wahlen -e POSTGRES_USER=wahlen -e POSTGRES_PASSWORD=wahlen \
   -p 55432:5432 postgres:18-alpine
