@@ -12,7 +12,10 @@ import java.time.Instant;
 public class ImportState {
 
     public static final String DAWUM_LAST_UPDATE = "dawum_last_update";
+    /** Wann zuletzt bei DAWUM nachgefragt wurde — unabhaengig davon, ob es etwas Neues gab. */
+    public static final String LAST_CHECK = "last_check";
     public static final String DAWUM_ETAG = "dawum_etag";
+    /** Wann zuletzt tatsaechlich Daten uebernommen wurden. */
     public static final String LAST_SUCCESSFUL_RUN = "last_successful_run";
     public static final String LAST_ERROR = "last_error";
 

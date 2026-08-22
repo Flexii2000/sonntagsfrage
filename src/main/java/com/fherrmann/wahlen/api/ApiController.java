@@ -75,6 +75,7 @@ public class ApiController {
         Map<String, String> state = importService.currentState();
         return new Dtos.MetaDto(
                 state.get(ImportState.DAWUM_LAST_UPDATE),
+                state.get(ImportState.LAST_CHECK),
                 state.get(ImportState.LAST_SUCCESSFUL_RUN),
                 state.get(ImportState.LAST_ERROR),
                 surveys.count(),

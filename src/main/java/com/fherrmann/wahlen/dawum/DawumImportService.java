@@ -89,6 +89,11 @@ public class DawumImportService {
     @Transactional
     public ImportOutcome importIfChanged(boolean force) {
         try {
+            // Zuerst festhalten, DASS nachgefragt wurde. Ohne das sieht ein Dienst,
+            // bei dem die Quelle laenger nichts Neues liefert, von aussen aus wie
+            // ein stehengebliebener Dienst.
+            writeState(ImportState.LAST_CHECK, Instant.now().toString());
+
             String knownUpdate = readState(ImportState.DAWUM_LAST_UPDATE).orElse(null);
             Optional<String> remoteUpdate = client.fetchLastUpdate();
 

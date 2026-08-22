@@ -8,7 +8,13 @@ import com.fherrmann.wahlen.domain.ImportState;
 import com.fherrmann.wahlen.repository.SurveyRepository;
 import com.fherrmann.wahlen.service.ParliamentViewService;
 import jakarta.servlet.http.HttpServletResponse;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -29,6 +35,8 @@ import org.springframework.http.HttpStatus;
  */
 @Controller
 public class PageController {
+
+    private static final ZoneId BERLIN = ZoneId.of("Europe/Berlin");
 
     private final ParliamentViewService view;
     private final DawumImportService importService;
@@ -98,7 +106,8 @@ public class PageController {
     public String data(Model model) {
         Map<String, String> state = importService.currentState();
         model.addAttribute("dawumLastUpdate", state.get(ImportState.DAWUM_LAST_UPDATE));
-        model.addAttribute("lastRun", state.get(ImportState.LAST_SUCCESSFUL_RUN));
+        model.addAttribute("lastCheck", humanTime(state.get(ImportState.LAST_CHECK)));
+        model.addAttribute("lastRun", humanTime(state.get(ImportState.LAST_SUCCESSFUL_RUN)));
         model.addAttribute("lastError", state.get(ImportState.LAST_ERROR));
         model.addAttribute("surveyCount", surveys.count());
         model.addAttribute("sigmaDays", properties.trend().sigmaDays());
@@ -117,6 +126,46 @@ public class PageController {
                 Allow: /wahlen/
                 Disallow: /wahlen/api/
                 """);
+    }
+
+    /**
+     * Zeitstempel so, wie ein Mensch ihn lesen will: Ortszeit plus Abstand zu
+     * jetzt. Gerade bei "laeuft der Abruf noch?" ist "vor 4 Minuten" die
+     * Antwort, nicht ein ISO-Zeitstempel in UTC.
+     */
+    private String humanTime(String isoInstant) {
+        if (isoInstant == null || isoInstant.isBlank()) {
+            return null;
+        }
+        try {
+            Instant instant = Instant.parse(isoInstant);
+            String absolute = DateTimeFormatter
+                    .ofPattern("d.M.yyyy, HH:mm 'Uhr'", Locale.GERMAN)
+                    .withZone(BERLIN)
+                    .format(instant);
+            return "%s (%s)".formatted(absolute, relative(instant));
+        } catch (DateTimeParseException e) {
+            return isoInstant;
+        }
+    }
+
+    private String relative(Instant instant) {
+        long minutes = Duration.between(instant, Instant.now()).toMinutes();
+        if (minutes < 1) {
+            return "gerade eben";
+        }
+        if (minutes == 1) {
+            return "vor einer Minute";
+        }
+        if (minutes < 90) {
+            return "vor %d Minuten".formatted(minutes);
+        }
+        long hours = minutes / 60;
+        if (hours < 36) {
+            return hours == 1 ? "vor einer Stunde" : "vor %d Stunden".formatted(hours);
+        }
+        long days = hours / 24;
+        return days == 1 ? "vor einem Tag" : "vor %d Tagen".formatted(days);
     }
 
     /**

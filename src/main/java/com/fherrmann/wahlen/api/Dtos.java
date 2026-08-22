@@ -93,7 +93,7 @@ public final class Dtos {
     }
 
     public record MetaDto(
-            String dawumLastUpdate, String lastSuccessfulRun, String lastError,
+            String dawumLastUpdate, String lastCheck, String lastImport, String lastError,
             long surveyCount, String license, String licenseUrl,
             String sourceName, String sourceUrl, double sigmaDays) {
     }

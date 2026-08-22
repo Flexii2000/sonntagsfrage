@@ -31,13 +31,28 @@
       <a th:href="@{/api/parliaments}">API dieser Seite</a> ebenfalls offen und
       steht unter derselben Lizenz.
     </p>
+    <h3>Wie oft aktualisiert wird</h3>
+    <p>
+      Diese Seite fragt <b>zweimal pro Stunde</b> bei DAWUM nach, jeweils um
+      :07 und :37, dazu einmal bei jedem Neustart. Übertragen wird dabei fast
+      immer nichts: geprüft wird zuerst ein 39 Byte großer Zeitstempel, und nur
+      wenn der sich geändert hat, wird der eigentliche Datenbestand geholt.
+      DAWUM selbst aktualisiert mehrmals täglich — zwischen zwei neuen Umfragen
+      liegen also oft Stunden, in denen es schlicht nichts Neues gibt.
+    </p>
     <ul>
       <li>Aktuell geladen: <b th:text="${surveyCount}">0</b> Umfragen</li>
       <li>Stand der Quelle: <code th:text="${dawumLastUpdate ?: 'unbekannt'}">–</code></li>
-      <li>Letzter erfolgreicher Abruf: <code th:text="${lastRun ?: 'noch keiner'}">–</code></li>
-      <li>Abrufrhythmus: zweimal pro Stunde, aber nur dann mit Datenübertragung,
-        wenn sich bei DAWUM tatsächlich etwas geändert hat</li>
+      <li>Zuletzt bei DAWUM nachgefragt:
+        <b th:text="${lastCheck ?: 'noch nie'}">–</b></li>
+      <li>Zuletzt tatsächlich neue Daten übernommen:
+        <b th:text="${lastRun ?: 'noch nie'}">–</b></li>
     </ul>
+    <p class="hint">
+      Dass die beiden Zeitpunkte auseinanderliegen, ist der Normalfall und kein
+      Fehler — es heißt nur, dass seit dem letzten Import bei DAWUM nichts
+      Neues erschienen ist.
+    </p>
 
     <h2>Wie die Kurven entstehen</h2>
     <p>
