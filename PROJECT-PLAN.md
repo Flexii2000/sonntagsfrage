@@ -331,3 +331,40 @@ Setup:   deploy/setup-sonntagsfrage.sh       (einmalig, braucht sudo)
 | nginx-Config von fherrmann.com wird beim Setup beschädigt | Setup-Skript legt Backup an, fügt nur eine `include`-Zeile ein, `nginx -t` vor Reload, Rollback bei Fehler |
 | Speicher auf dem Server (8,6 GB frei) | JVM auf 256 MB Heap begrenzt, Postgres-Container klein konfiguriert |
 | Parteifarben/Sperrklausel-Sonderfälle | Alles in Referenzdaten, kein Code-Change nötig |
+
+---
+
+## 12. Was sich beim Bauen gegenüber diesem Plan geändert hat
+
+Nachgetragen am 2026-08-22, damit dieses Dokument nicht das Falsche behauptet.
+
+- **Repo heißt `sonntagsfrage`, nicht `wahlen`.** App, URL, Container und
+  Datenbank behalten `wahlen`. Siehe Abschnitt 2 im `AGENT-RUNBOOK.md`.
+- **Die Glättungsbreite ist nicht konstant.** σ = 10 Tage hätte für dünn
+  befragte Landtage nicht gereicht — die Kurve zerfiel dort in Striche.
+  Jetzt: Median des Abstands zwischen Umfragen × 1,5, gedeckelt bei 45 Tagen
+  (`TrendCalculator.adaptiveSigma`). Der Bundestag bleibt bei 10.
+  Die Kopfzahlen ("Aktueller Stand") nutzen ein eigenes, kurzes Fenster von
+  120 Tagen, sonst würden sie die jüngste Bewegung wegglätten.
+- **Serien mit Lücken fliegen aus dem Chart.** Parteien, die in weniger als
+  30 % der Umfragen eines Zeitraums überhaupt abgefragt werden (typisch: Freie
+  Wähler beim Bundestag), erschienen als Strichkette. In den Tabellen bleiben
+  sie (`ParliamentViewService.MIN_COVERAGE`).
+- **Der Sitzbogen sortiert nach politischem Spektrum**, nicht nach
+  Fraktionsgröße — dafür gibt es `spectrum` in `reference/parties.yaml`. Nach
+  Größe sortiert sah der Bogen für jeden, der Sitzbögen kennt, schlicht falsch
+  aus.
+- **Jackson 3 statt Jackson 2.** Spring Boot 4 nutzt `tools.jackson.*`;
+  das YAML-Modul musste aus derselben Generation kommen. Siehe die
+  Spring-Boot-4-Fallstricke im Runbook.
+- **Parteifarben fallen absichtlich durch die Palettenprüfung.** Gemessen:
+  SPD-Rot gegen Grünen-Grün liegt bei ΔE 3,7 im Deutan-Modell (Zielwert wäre
+  ≥ 8). Semantisch vorgegebene Farben lassen sich nicht wegoptimieren, ohne
+  die Darstellung falsch zu machen. Ausgeglichen wird das durch
+  Sekundärkodierung: Direktbeschriftung am Kurvenende, Legende mit Text,
+  Kürzel im Tooltip, Tabellenansicht, Strichmuster-Schalter. Nur dort, wo
+  Freiheit bestand (BSW gegen Linke im Dark Mode), wurde nachgesteuert.
+- **Postgres 18 will das Volume an `/var/lib/postgresql`**, nicht an
+  `.../data` — erst beim Deploy auf dem Server aufgefallen.
+- **`eclipse-temurin:25-jre` hat weder `curl` noch `wget`**, der
+  Container-Healthcheck lief deshalb zunächst ins Leere.
