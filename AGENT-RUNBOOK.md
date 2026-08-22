@@ -59,7 +59,30 @@ Dasselbe Muster wie bei `~/Server-Projects/CSVExporter` ↔ `~/haspa-exporter/`.
 
 ---
 
-## 4. Alltag
+## 4. Statusboard
+
+`status.fherrmann.com` hat eine Karte **Sonntagsfrage**. Sie liest — anders
+als die übrigen Karten — nicht aus `/status-data/`, sondern direkt
+`https://fherrmann.com/wahlen/api/meta` im Browser des Betrachters. Kein
+Cron-Sammler, keine Zwischendatei, die still veralten kann.
+
+Dafür gibt die App eine eng gefasste CORS-Freigabe: nur die Herkünfte aus
+`wahlen.cors.allowed-origins` (Standard: `https://status.fherrmann.com`), nur
+`GET`, nur `/api/**`. Wer die Statusboard-Domain ändert, muss sie dort
+nachtragen — sonst zeigt die Karte "Dienst nicht erreichbar", obwohl alles läuft.
+
+Schwellen in `statusboard/web/app.js`:
+
+| Zustand | Auslöser |
+|---|---|
+| **Kein Abruf** (rot) | seit über 40 Minuten kein Abruf — zwei ausgefallene Zyklen, der Scheduler hängt |
+| **Fehler** (rot) | `lastError` gesetzt oder `/api/meta` nicht erreichbar |
+| **Quelle still** (gelb) | DAWUM liefert seit über vier Tagen nichts Neues |
+| **OK** (grün) | sonst |
+
+---
+
+## 5. Alltag
 
 ```bash
 # Deployen (nach git push)
@@ -81,7 +104,7 @@ schnellste Weg, ohne SSH zu sehen, ob die Daten frisch sind.
 
 ---
 
-## 5. Ersteinrichtung (einmalig)
+## 6. Ersteinrichtung (einmalig)
 
 ```bash
 # 1. auf dem Server, als flexii
@@ -102,7 +125,7 @@ lädt nginx erst neu, **nachdem** die App gesund geantwortet hat.
 
 ---
 
-## 6. Wie die Daten reinkommen
+## 7. Wie die Daten reinkommen
 
 Beim Start und danach zweimal pro Stunde (`0 7,37 * * * *`, Europe/Berlin):
 
@@ -125,7 +148,7 @@ cd ~/services/sonntagsfrage && docker compose restart app
 
 ---
 
-## 7. Wartung, die tatsächlich anfällt
+## 8. Wartung, die tatsächlich anfällt
 
 ### Nach jeder Wahl (der einzige regelmäßige Handgriff)
 
@@ -175,7 +198,7 @@ in `reference/parliaments.yaml` ergänzen.
 
 ---
 
-## 8. Bekannte Fallstricke
+## 9. Bekannte Fallstricke
 
 ### ⚠️ Snap-Docker verbietet `/opt`-Bind-Mounts
 Siehe oben. Wenn Container-DNS oder Port-Forwarding plötzlich kaputt sind
@@ -270,12 +293,13 @@ Der Alltag (`update-sonntagsfrage.sh`) kommt ohne sudo aus.
 
 ---
 
-## 9. Wenn etwas kaputt ist
+## 10. Wenn etwas kaputt ist
 
 | Symptom | Erster Griff |
 |---|---|
 | 502 auf `/wahlen` | `docker compose ps` — läuft `wahlen-app`? `docker compose logs --tail=100 app` |
-| Seite da, Daten alt | `/wahlen/daten` ansehen. Steht dort ein Fehler, ist DAWUM oder das Netz das Problem — der Stand bleibt gültig |
+| Seite da, Daten alt | `/wahlen/daten` ansehen: dort stehen getrennt "zuletzt nachgefragt" und "zuletzt neue Daten übernommen". Liegen die weit auseinander, hat DAWUM einfach nichts Neues — das ist der Normalfall, kein Fehler |
+| Statusboard-Karte sagt "Dienst nicht erreichbar", Seite läuft aber | CORS: steht die Statusboard-Herkunft in `wahlen.cors.allowed-origins`? Prüfen mit `curl -s -i -H "Origin: https://status.fherrmann.com" https://fherrmann.com/wahlen/api/meta \| grep -i access-control` |
 | `Schema validation: missing table` | Flyway lief nicht, siehe Fallstrick oben |
 | `duplicate key ... uq_election_result_final` | Fehlender Flush im ReferenceDataLoader, siehe oben |
 | Wahlergebnis fehlt im Vergleich | Parteikürzel in `elections.yaml` passt nicht zur DAWUM-Schreibweise dieses Parlaments — Log nach "Partei ... unbekannt" durchsuchen |
@@ -294,7 +318,7 @@ docker compose up -d --build     # importiert beim Start alles neu, dauert ~1 mi
 
 ---
 
-## 10. Offen / als Nächstes
+## 11. Offen / als Nächstes
 
 - **Wahlabend-Modus.** Das Datenmodell trägt ihn schon:
   `election_result.kind` kennt `PROGNOSE | HOCHRECHNUNG | VORLAEUFIG |
@@ -302,6 +326,4 @@ docker compose up -d --build     # importiert beim Start alles neu, dauert ~1 mi
   Adapter je Landeswahlleiter plus ein geschützter POST-Endpoint als
   manueller Notnagel für 18:00 Uhr. Nächste Kandidaten: Sachsen-Anhalt
   (06.09.2026), Berlin und Mecklenburg-Vorpommern (beide 20.09.2026).
-- Karte auf `status.fherrmann.com` (der Healthcheck liegt schon unter
-  `/wahlen/actuator/health`).
 - Fehlerspannen im Chart darstellen.
