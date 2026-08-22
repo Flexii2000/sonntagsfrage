@@ -1,0 +1,4 @@
+# Die Tests der Rechenlogik brauchen weder Datenbank noch Spring-Kontext.
+spring:
+  main:
+    web-application-type: none

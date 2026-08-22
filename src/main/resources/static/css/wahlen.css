@@ -1,0 +1,440 @@
+/* Wahlen — fherrmann.com/wahlen
+   Knuepft an die Design-Sprache der Landing Page an (gleiche Tokens, gleicher
+   Font-Stack, 14px-Radius), bringt aber die Zusaetze mit, die Datendarstellung
+   braucht: Gitterfarbe, Flaechenfarbe fuer Ringe und Luecken, tabellarische
+   Ziffern. */
+
+:root {
+  color-scheme: light dark;
+  --bg: #f5f5f7;
+  --card-bg: #ffffff;
+  --surface: #ffffff;
+  --text: #1d1d1f;
+  --muted: #6e6e73;
+  --faint: #8e8e93;
+  --border: #e5e5e7;
+  --grid: #ececee;
+  --accent: #0071e3;
+  --accent-soft: rgba(0, 113, 227, 0.1);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.04);
+  --radius: 14px;
+  --radius-sm: 9px;
+  --pos: #1a7f37;
+  --neg: #b3261e;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d0d0f;
+    --card-bg: #1c1c1e;
+    --surface: #1c1c1e;
+    --text: #f5f5f7;
+    --muted: #9a9a9e;
+    --faint: #77777c;
+    --border: #2e2e30;
+    --grid: #2a2a2c;
+    --accent: #4da3ff;
+    --accent-soft: rgba(77, 163, 255, 0.14);
+    --shadow: none;
+    --pos: #4ac26b;
+    --neg: #ff6b6b;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 1.25rem; }
+
+/* ---------------------------------------------------------------- Kopfzeile */
+
+.site-header {
+  border-bottom: 1px solid var(--border);
+  background: var(--card-bg);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.site-header .wrap {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 56px;
+  flex-wrap: wrap;
+}
+
+.brand {
+  font-weight: 650;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  font-size: 1.02rem;
+}
+.brand:hover { text-decoration: none; }
+.brand span { color: var(--muted); font-weight: 400; }
+
+.site-nav { margin-left: auto; display: flex; gap: 1.1rem; font-size: 0.875rem; }
+.site-nav a { color: var(--muted); }
+.site-nav a[aria-current="page"] { color: var(--text); font-weight: 550; }
+
+/* ------------------------------------------------------------------ Bausteine */
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.35rem 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.card > h2, .card > h3 { margin-top: 0; }
+
+h1 { font-size: 1.9rem; font-weight: 650; letter-spacing: -0.02em; margin: 0 0 0.3rem; }
+h2 { font-size: 1.15rem; font-weight: 620; letter-spacing: -0.01em; margin: 0 0 0.15rem; }
+h3 { font-size: 0.95rem; font-weight: 600; margin: 0 0 0.6rem; }
+
+.eyebrow {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 0.45rem;
+}
+
+.sub { color: var(--muted); font-size: 0.875rem; margin: 0; }
+.hint { color: var(--faint); font-size: 0.8rem; }
+
+.section { margin: 2.25rem 0; }
+.section > header { margin-bottom: 0.9rem; }
+
+.grid { display: grid; gap: 1rem; }
+.grid-cards { grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); }
+.split { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .split { grid-template-columns: 1.15fr 1fr; } }
+
+/* ------------------------------------------------------------------ Steuerung */
+
+/* Eine Filterzeile ueber allem, was sie steuert — nicht pro Chart. */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.1rem;
+  align-items: center;
+  padding: 0.75rem 0;
+  margin-bottom: 0.4rem;
+}
+
+.segmented {
+  display: inline-flex;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.segmented button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.32rem 0.8rem;
+  border-radius: 999px;
+  cursor: pointer;
+  min-height: 30px;
+}
+.segmented button[aria-pressed="true"] {
+  background: var(--card-bg);
+  color: var(--text);
+  font-weight: 550;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.07);
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+.toggle input { accent-color: var(--accent); width: 15px; height: 15px; }
+
+/* --------------------------------------------------------------------- Chart */
+
+.chart-card { padding-bottom: 1rem; }
+
+/* Die Hoehe umfasst Plot UND Achsenband — sonst entsteht ein Mini-Scroller. */
+.chart { width: 100%; display: block; overflow: visible; touch-action: pan-y; }
+.chart-lg { height: 380px; }
+.chart-md { height: 260px; }
+@media (max-width: 640px) { .chart-lg { height: 300px; } }
+
+.chart text { font-family: inherit; }
+.axis-label { fill: var(--faint); font-size: 11px; }
+.grid-line { stroke: var(--grid); stroke-width: 1; }
+.axis-line { stroke: var(--border); stroke-width: 1; }
+.series-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.series-dot { opacity: 0.32; }
+.end-label { font-size: 11.5px; font-weight: 600; }
+.leader { stroke-width: 1; opacity: 0.55; }
+.marker-line { stroke: var(--faint); stroke-width: 1; }
+.marker-label { fill: var(--faint); font-size: 10.5px; }
+.crosshair { stroke: var(--muted); stroke-width: 1; }
+.threshold-line { stroke: var(--faint); stroke-width: 1; opacity: 0.6; }
+
+/* Legende ist immer da — Farbe allein traegt hier keine Identitaet,
+   siehe reference/parties.yaml. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.8rem;
+}
+
+.legend button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.24rem 0.7rem 0.24rem 0.5rem;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  min-height: 28px;
+}
+.legend button[aria-pressed="false"] { opacity: 0.42; }
+.legend .key { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.legend .val { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.7rem;
+  font-size: 0.8rem;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.13);
+  z-index: 30;
+  min-width: 150px;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+.tooltip[data-visible="true"] { opacity: 1; }
+.tooltip .tt-date { color: var(--muted); font-size: 0.74rem; margin-bottom: 0.35rem; }
+.tooltip .tt-row { display: flex; align-items: center; gap: 0.4rem; line-height: 1.5; }
+.tooltip .tt-row .key { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.tooltip .tt-row .nm { flex: 1; }
+.tooltip .tt-row .vl { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.chart-host { position: relative; }
+
+/* ----------------------------------------------------------- Werte & Balken */
+
+.figures { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.2rem 0 0; }
+
+.figure-row {
+  display: grid;
+  grid-template-columns: 4.6rem 1fr auto;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.figure-row .nm { font-size: 0.85rem; font-weight: 550; display: flex; align-items: center; gap: 0.4rem; }
+.figure-row .nm .key { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+
+.bar-track { height: 12px; border-radius: 3px; background: var(--bg); overflow: hidden; position: relative; }
+/* 4px runde Datenkante, quadratisch an der Grundlinie */
+.bar-fill { display: block; height: 100%; border-radius: 0 4px 4px 0; }
+
+.figure-row .vl {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.87rem;
+  font-weight: 600;
+  min-width: 4.4rem;
+  text-align: right;
+}
+.figure-row .vl .delta { font-weight: 500; font-size: 0.76rem; margin-left: 0.3rem; }
+.delta.up { color: var(--pos); }
+.delta.down { color: var(--neg); }
+.delta.flat { color: var(--faint); }
+
+/* Referenzmarke fuer das Ergebnis der letzten Wahl */
+.bar-track .ref {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--text);
+  opacity: 0.45;
+}
+
+/* --------------------------------------------------------------- Sitzbogen */
+
+.seat-arc { width: 100%; height: auto; display: block; }
+.seat { stroke: var(--surface); stroke-width: 1.2; }
+
+.majority-note {
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 0.4rem;
+}
+
+.coalitions { list-style: none; margin: 0.4rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+
+.coalition {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+}
+.coalition .keys { display: flex; gap: 2px; flex: none; }
+.coalition .keys i { width: 9px; height: 16px; border-radius: 2px; display: block; }
+.coalition .nm { font-weight: 550; }
+.coalition .who { color: var(--muted); font-size: 0.79rem; }
+.coalition .seats { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+.coalition .seats b { color: var(--text); }
+
+/* ---------------------------------------------------------------- Tabellen */
+
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+table.data th, table.data td { padding: 0.5rem 0.6rem; text-align: right; white-space: nowrap; }
+table.data th:first-child, table.data td:first-child,
+table.data th.left, table.data td.left { text-align: left; }
+table.data thead th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.76rem;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--card-bg);
+}
+table.data tbody tr + tr td { border-top: 1px solid var(--grid); }
+table.data tbody tr:hover td { background: var(--accent-soft); }
+table.data .party-head { display: inline-flex; align-items: center; gap: 0.3rem; }
+table.data .party-head .key { width: 8px; height: 8px; border-radius: 2px; }
+table.data td.dim { color: var(--muted); }
+
+/* --------------------------------------------------------------- Parlamente */
+
+.parliament-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  color: var(--text);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+a.parliament-card:hover { text-decoration: none; transform: translateY(-2px); border-color: var(--accent); }
+.parliament-card .top { display: flex; align-items: baseline; gap: 0.5rem; }
+.parliament-card .top h3 { margin: 0; font-size: 0.95rem; }
+.parliament-card .when { margin-left: auto; font-size: 0.74rem; color: var(--muted); white-space: nowrap; }
+.parliament-card .spark { height: 46px; width: 100%; display: block; }
+.parliament-card .tops { display: flex; flex-wrap: wrap; gap: 0.3rem 0.75rem; font-size: 0.79rem; }
+.parliament-card .tops span { display: inline-flex; align-items: center; gap: 0.3rem; color: var(--muted); }
+.parliament-card .tops i { width: 8px; height: 8px; border-radius: 2px; display: block; }
+.parliament-card .tops b { color: var(--text); font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  white-space: nowrap;
+}
+.badge.soon { background: rgba(226, 92, 0, 0.13); color: #c25400; }
+@media (prefers-color-scheme: dark) { .badge.soon { background: rgba(255, 146, 87, 0.16); color: #ff9257; } }
+
+/* -------------------------------------------------------------- Wahlkalender */
+
+.calendar { list-style: none; margin: 0; padding: 0; }
+.calendar li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  padding: 0.55rem 0;
+  font-size: 0.87rem;
+}
+.calendar li + li { border-top: 1px solid var(--grid); }
+.calendar .date { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 6.2rem; font-size: 0.82rem; }
+.calendar .away { margin-left: auto; color: var(--faint); font-size: 0.79rem; white-space: nowrap; }
+
+/* ----------------------------------------------------------------- Fusszeile */
+
+.site-footer {
+  margin-top: 3rem;
+  border-top: 1px solid var(--border);
+  padding: 1.5rem 0 2.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.site-footer p { margin: 0 0 0.35rem; }
+
+.prose { max-width: 62ch; }
+.prose p { margin: 0 0 0.9rem; }
+.prose h2 { margin-top: 1.8rem; }
+.prose ul { padding-left: 1.15rem; }
+.prose li { margin-bottom: 0.35rem; }
+.prose code {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 0.08em 0.35em;
+  font-size: 0.88em;
+}
+
+.stale {
+  background: rgba(226, 92, 0, 0.1);
+  border: 1px solid rgba(226, 92, 0, 0.3);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.8rem;
+  font-size: 0.83rem;
+  margin-bottom: 1rem;
+}
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

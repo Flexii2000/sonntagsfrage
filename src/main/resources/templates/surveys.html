@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head(${pageTitle})}"></head>
+<body>
+<header th:replace="~{fragments :: header('')}"></header>
+
+<main class="wrap">
+  <section class="section">
+    <header>
+      <p class="eyebrow">Rohdaten</p>
+      <h1>Alle Umfragen</h1>
+      <p class="sub">
+        <span th:text="${detail.parliament.name}">Parlament</span> ·
+        <span th:text="${#lists.size(detail.polls)}">0</span> Umfragen ·
+        <a th:href="@{/{slug}(slug=${detail.parliament.slug})}">zurück zur Auswertung</a>
+      </p>
+    </header>
+
+    <div class="controls">
+      <label class="toggle">
+        Institut
+        <select id="institute-filter" style="font: inherit; padding: 0.25rem 0.4rem;">
+          <option value="">alle</option>
+        </select>
+      </label>
+      <span class="hint" id="row-count"></span>
+    </div>
+
+    <div class="card table-scroll">
+      <table class="data" id="surveys-table">
+        <thead>
+        <tr>
+          <th class="left">Erhebung</th>
+          <th class="left">Institut</th>
+          <th class="left">Auftraggeber</th>
+          <th th:each="party : ${detail.parties}">
+            <span class="party-head">
+              <span class="key" th:style="'background:' + ${party.colorLight}"
+                    th:attr="data-color-light=${party.colorLight},data-color-dark=${party.colorDark}"></span>
+              <span th:text="${party.shortcut}">X</span>
+            </span>
+          </th>
+          <th>Befragte</th>
+          <th class="left">Methode</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="poll : ${detail.polls}" th:attr="data-institute=${poll.institute}">
+          <td class="left"
+              th:text="${poll.periodStart != null
+                        ? #temporals.format(poll.periodStart, 'd.M.yy') + '–' + #temporals.format(poll.periodEnd, 'd.M.yy')
+                        : #temporals.format(poll.published, 'd.M.yy')}">Zeitraum</td>
+          <td class="left" th:text="${poll.institute ?: '–'}">Institut</td>
+          <td class="left dim" th:text="${poll.tasker ?: '–'}">Auftraggeber</td>
+          <td th:each="party : ${detail.parties}" th:with="v=${poll.results.get(party.id)}"
+              th:classappend="${v == null ? 'dim' : ''}"
+              th:text="${v == null ? '–' : #numbers.formatDecimal(v, 1, 1, 'COMMA')}">–</td>
+          <td class="dim" th:text="${poll.surveyed ?: '–'}">0</td>
+          <td class="left dim" th:text="${poll.method ?: '–'}">Methode</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+<script type="application/json" id="bootstrap" th:utext="${bootstrap}">{}</script>
+<script type="module" th:src="@{/js/app.js}"></script>
+</body>
+</html>

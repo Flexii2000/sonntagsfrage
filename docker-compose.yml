@@ -1,0 +1,51 @@
+# Lokal:  docker compose up -d --build
+# Server: /home/flexii/services/wahlen  (NICHT /opt — Snap-Docker verbietet
+#         Bind-Mounts dorthin, siehe AGENT-RUNBOOK.md)
+
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: wahlen-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-wahlen}
+      POSTGRES_USER: ${DB_USER:-wahlen}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-wahlen}
+    volumes:
+      # Named Volume, kein Bind-Mount — laeuft dadurch auch unter Snap-Docker.
+      - wahlen-db-data:/var/lib/postgresql/data
+    # Bewusst kein Port-Mapping: die Datenbank ist nur fuer die App da, und
+    # 5432 ist auf dem Server ohnehin schon von Firefly belegt.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-wahlen} -d ${DB_NAME:-wahlen}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: wahlen-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-wahlen}
+      DB_USER: ${DB_USER:-wahlen}
+      DB_PASSWORD: ${DB_PASSWORD:-wahlen}
+      TZ: Europe/Berlin
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=70 -Xss512k"
+    ports:
+      # Nur lokal gebunden — nach aussen geht ausschliesslich nginx.
+      - "127.0.0.1:${APP_PORT:-8090}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/wahlen/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  wahlen-db-data:

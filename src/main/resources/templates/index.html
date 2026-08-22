@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head(${pageTitle})}"></head>
+<body>
+<header th:replace="~{fragments :: header('home')}"></header>
+
+<main class="wrap">
+
+  <!-- ================================================= Featured ========== -->
+  <section class="section" th:if="${hero != null}">
+    <header>
+      <p class="eyebrow" th:text="${featured.headline}">Sonntagsfrage</p>
+      <h1 th:text="${hero.parliament.name}">Bundestag</h1>
+      <p class="sub">
+        <span th:text="${hero.range.label}">seit der letzten Wahl</span>
+        · <span th:text="${hero.parliament.surveyCount}">0</span> Umfragen
+        · Stand <span th:text="${#temporals.format(hero.current.asOf, 'd. MMMM yyyy')}">heute</span>
+      </p>
+    </header>
+
+    <div class="split">
+      <div class="card chart-card">
+        <div class="chart-host" id="hero-chart"></div>
+        <div class="legend" id="hero-legend"></div>
+        <p class="hint" style="margin-top:0.7rem">
+          Geglätteter Verlauf über alle Institute. Die dünne waagerechte Linie
+          markiert die Sperrklausel, die gestrichelte senkrechte die letzte Wahl.
+          Legende anklicken blendet eine Partei aus.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>Aktueller Stand</h2>
+        <p class="hint" th:if="${hero.lastElection != null}">
+          Der schmale Strich markiert das Ergebnis der letzten Wahl
+          (<span th:text="${#temporals.format(hero.lastElection.date, 'd.M.yyyy')}">Datum</span>).
+        </p>
+        <div class="figures">
+          <th:block th:each="party : ${hero.parties}"
+                    th:if="${hero.current.value.containsKey(party.id)}">
+            <div th:replace="~{fragments :: figureRow(
+                    ${party},
+                    ${hero.current.value.get(party.id)},
+                    ${hero.current.change30d.get(party.id)},
+                    50.0,
+                    ${hero.lastElection != null ? hero.lastElection.results.get(party.id) : null})}"></div>
+          </th:block>
+        </div>
+        <p class="hint" style="margin-top:0.9rem">
+          Zahl rechts: geglätteter Wert. Kleine Zahl: Veränderung in 30 Tagen.
+        </p>
+        <p style="margin-top:1rem">
+          <a th:href="@{/{slug}(slug=${hero.parliament.slug})}">
+            Alle Auswertungen zu <span th:text="${hero.parliament.shortcut}">…</span> →
+          </a>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================= Kalender =========== -->
+  <section class="section">
+    <header>
+      <h2>Wahlkalender</h2>
+      <p class="sub">Die nächsten Termine. Ungefähre Termine sind als solche gekennzeichnet.</p>
+    </header>
+    <div class="card">
+      <ul class="calendar">
+        <li th:each="p : ${overview}" th:if="${p.nextElection != null and p.nextElection.daysAway <= 1500}">
+          <span class="date" th:text="${#temporals.format(p.nextElection.date, 'd. MMM yyyy')}">Datum</span>
+          <a th:href="@{/{slug}(slug=${p.parliament.slug})}" th:text="${p.parliament.electionName}">Wahl</a>
+          <span class="badge soon" th:if="${p.nextElection.daysAway <= 21}">demnächst</span>
+          <span class="badge" th:unless="${p.nextElection.confirmed}">Termin noch nicht amtlich</span>
+          <span class="away"
+                th:text="${p.nextElection.daysAway == 0 ? 'heute'
+                          : (p.nextElection.daysAway == 1 ? 'morgen'
+                          : 'in ' + p.nextElection.daysAway + ' Tagen')}">in x Tagen</span>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ================================================= Parlamente ========= -->
+  <section class="section">
+    <header>
+      <h2>Alle Parlamente</h2>
+      <p class="sub">Bundestag, 16 Landtage und das Europaparlament. Verlauf der letzten zwölf Monate.</p>
+    </header>
+    <div class="grid grid-cards">
+      <a class="card parliament-card" th:each="p : ${overview}"
+         th:href="@{/{slug}(slug=${p.parliament.slug})}"
+         th:attr="data-slug=${p.parliament.slug}">
+        <span class="top">
+          <h3 th:text="${p.parliament.shortcut}">Parlament</h3>
+          <span class="when" th:if="${p.nextElection != null and p.nextElection.daysAway <= 60}"
+                th:text="'Wahl in ' + ${p.nextElection.daysAway} + ' Tagen'">bald</span>
+          <span class="when" th:unless="${p.nextElection != null and p.nextElection.daysAway <= 60}"
+                th:text="${p.parliament.latestSurvey != null
+                          ? #temporals.format(p.parliament.latestSurvey, 'MMM yyyy') : 'keine Daten'}">Stand</span>
+        </span>
+        <svg class="spark" th:attr="data-slug=${p.parliament.slug}"></svg>
+        <span class="tops">
+          <span th:each="party : ${p.parties}"
+                th:if="${p.current.value.containsKey(party.id) and party.id != 0}"
+                th:with="v=${p.current.value.get(party.id)}">
+            <i th:style="'background:' + ${party.colorLight}"
+               th:attr="data-color-light=${party.colorLight},data-color-dark=${party.colorDark}"></i>
+            <span th:text="${party.shortcut}">X</span>
+            <b th:text="${#numbers.formatDecimal(v, 1, 1, 'COMMA')}">0,0</b>
+          </span>
+        </span>
+      </a>
+    </div>
+  </section>
+
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+
+<script type="application/json" id="bootstrap" th:utext="${bootstrap}">{}</script>
+<script type="module" th:src="@{/js/app.js}"></script>
+</body>
+</html>

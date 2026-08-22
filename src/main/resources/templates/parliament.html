@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head(${pageTitle})}"></head>
+<body>
+<header th:replace="~{fragments :: header(${detail.parliament.slug})}"></header>
+
+<main class="wrap">
+
+  <section class="section">
+    <header>
+      <p class="eyebrow">Sonntagsfrage</p>
+      <h1 th:text="${detail.parliament.name}">Parlament</h1>
+      <p class="sub">
+        <span th:text="${detail.parliament.surveyCount}">0</span> Umfragen
+        <th:block th:if="${detail.parliament.latestSurvey != null}">
+          · jüngste Erhebung
+          <span th:text="${#temporals.format(detail.parliament.latestSurvey, 'd. MMMM yyyy')}">Datum</span>
+        </th:block>
+        <th:block th:if="${detail.nextElection != null}">
+          · nächste <span th:text="${detail.parliament.electionName}">Wahl</span>
+          <span th:if="${detail.nextElection.confirmed}"
+                th:text="'am ' + ${#temporals.format(detail.nextElection.date, 'd. MMMM yyyy')}">Datum</span>
+          <span th:unless="${detail.nextElection.confirmed}"
+                th:text="'voraussichtlich ' + ${#temporals.format(detail.nextElection.date, 'yyyy')}">Jahr</span>
+        </th:block>
+      </p>
+    </header>
+
+    <!-- Eine Steuerzeile ueber allem, was sie betrifft. -->
+    <div class="controls" id="controls">
+      <div class="segmented" role="group" aria-label="Zeitraum">
+        <button type="button" data-range="election" aria-pressed="true">seit der letzten Wahl</button>
+        <button type="button" data-range="12" aria-pressed="false">12 Monate</button>
+        <button type="button" data-range="3" aria-pressed="false">3 Monate</button>
+        <button type="button" data-range="all" aria-pressed="false">alles</button>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-raw"> einzelne Umfragen einblenden
+      </label>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-patterns"> Strichmuster (Farbsehschwäche)
+      </label>
+    </div>
+
+    <div class="card chart-card">
+      <div class="chart-host" id="detail-chart"></div>
+      <div class="legend" id="detail-legend"></div>
+      <p class="hint" style="margin-top:0.7rem">
+        Linien sind ein Gauß-gewichteter gleitender Durchschnitt (σ = <span id="sigma">10</span> Tage)
+        über alle Institute. Jede Umfrage zählt zur Mitte ihres Erhebungszeitraums, nicht zum
+        Veröffentlichungstag. Die dünne waagerechte Linie markiert die
+        <span th:text="${#numbers.formatDecimal(detail.parliament.threshold, 1, 0, 'COMMA')}">5</span>-%-Sperrklausel.
+        <a th:href="@{/daten}">Wie das gerechnet wird</a>.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================ Stand & Sitze =========== -->
+  <section class="section split">
+    <div class="card">
+      <h2>Aktueller Stand</h2>
+      <p class="sub" th:if="${detail.lastElection != null}">
+        Strich im Balken: Ergebnis der Wahl vom
+        <span th:text="${#temporals.format(detail.lastElection.date, 'd. MMMM yyyy')}">Datum</span><th:block
+          th:if="${detail.lastElection.turnout != null}">, Wahlbeteiligung
+        <span th:text="${#numbers.formatDecimal(detail.lastElection.turnout, 1, 1, 'COMMA')} + ' %'">0 %</span></th:block>.
+      </p>
+      <div class="figures">
+        <th:block th:each="party : ${detail.parties}"
+                  th:if="${detail.current.value.containsKey(party.id)}">
+          <div th:replace="~{fragments :: figureRow(
+                  ${party},
+                  ${detail.current.value.get(party.id)},
+                  ${detail.current.change30d.get(party.id)},
+                  50.0,
+                  ${detail.lastElection != null ? detail.lastElection.results.get(party.id) : null})}"></div>
+        </th:block>
+      </div>
+    </div>
+
+    <div class="card" th:if="${detail.seats != null}">
+      <h2>Sitzprojektion</h2>
+      <p class="sub" th:text="${detail.seats.basis}">Verfahren</p>
+      <svg class="seat-arc" id="seat-arc"></svg>
+      <p class="majority-note">
+        <th:block th:each="e,it : ${detail.seats.entries}">
+          <span th:text="${#lists.toList(detail.parties).?[id == __${e.partyId}__][0]?.shortcut ?: '?'}">X</span>
+          <b th:text="${e.seats}">0</b><th:block th:if="${!it.last}"> · </th:block>
+        </th:block>
+      </p>
+      <p class="hint" th:if="${!detail.seats.belowThreshold.isEmpty()}">
+        An der Sperrklausel gescheitert:
+        <th:block th:each="entry,it : ${detail.seats.belowThreshold}">
+          <span th:text="${#lists.toList(detail.parties).?[id == __${entry.key}__][0]?.shortcut ?: '?'}">X</span>
+          <span th:text="'(' + ${#numbers.formatDecimal(entry.value, 1, 1, 'COMMA')} + ' %)'">(0 %)</span><th:block
+            th:if="${!it.last}">, </th:block>
+        </th:block>
+      </p>
+      <p class="hint">
+        Vereinfachte Projektion: Überhang- und Ausgleichsmandate, Direktmandate und die
+        Grundmandatsklausel lassen sich aus einem landesweiten Prozentwert nicht ableiten.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================== Koalitionen =========== -->
+  <section class="section" th:if="${!detail.coalitions.isEmpty()}">
+    <header>
+      <h2>Rechnerische Mehrheiten</h2>
+      <p class="sub">
+        Alle Bündnisse, die auf Basis der Projektion eine Mehrheit hätten und bei denen kein
+        Partner überflüssig ist. Rein arithmetisch — wer mit wem koalieren würde, bewertet
+        diese Seite nicht.
+      </p>
+    </header>
+    <div class="card">
+      <ul class="coalitions">
+        <li class="coalition" th:each="c : ${detail.coalitions}">
+          <span class="keys">
+            <i th:each="pid : ${c.partyIds}"
+               th:with="p=${#lists.toList(detail.parties).?[id == __${pid}__][0]}"
+               th:style="'background:' + ${p != null ? p.colorLight : '#8A8F98'}"
+               th:attr="data-color-light=${p != null ? p.colorLight : '#8A8F98'},
+                        data-color-dark=${p != null ? p.colorDark : '#9BA1A9'}"></i>
+          </span>
+          <span class="nm" th:text="${c.name}">Koalition</span>
+          <span class="who">
+            <th:block th:each="pid,it : ${c.partyIds}"
+                      th:with="p=${#lists.toList(detail.parties).?[id == __${pid}__][0]}">
+              <span th:text="${p != null ? p.shortcut : pid}">X</span><th:block
+                th:if="${!it.last}"> + </th:block>
+            </th:block>
+          </span>
+          <span class="seats">
+            <b th:text="${c.seats}">0</b> Sitze
+            <span th:text="'(+' + ${c.over} + ')'">(+0)</span>
+          </span>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ========================================= Institutsvergleich ========= -->
+  <section class="section" th:if="${!detail.instituteEffects.isEmpty()}">
+    <header>
+      <h2>Institutsvergleich</h2>
+      <p class="sub">
+        Wie stark weicht ein Institut im Schnitt vom Konsens aller anderen ab? Positive Werte:
+        das Institut sieht die Partei stärker. Zeitraum: die letzten 24 Monate.
+      </p>
+    </header>
+    <div class="card table-scroll">
+      <table class="data">
+        <thead>
+        <tr>
+          <th class="left">Institut</th>
+          <th th:each="party : ${detail.parties}" th:if="${party.id != 0}">
+            <span class="party-head">
+              <span class="key" th:style="'background:' + ${party.colorLight}"
+                    th:attr="data-color-light=${party.colorLight},data-color-dark=${party.colorDark}"></span>
+              <span th:text="${party.shortcut}">X</span>
+            </span>
+          </th>
+          <th>Umfragen</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="e : ${detail.instituteEffects}">
+          <td class="left" th:text="${e.institute}">Institut</td>
+          <td th:each="party : ${detail.parties}" th:if="${party.id != 0}"
+              th:with="d=${e.deviation.get(party.id)}"
+              th:classappend="${d == null ? 'dim' : ''}"
+              th:text="${d == null ? '–' : ((d > 0 ? '+' : '') + #numbers.formatDecimal(d, 1, 1, 'COMMA'))}">–</td>
+          <td class="dim" th:text="${e.surveyCount}">0</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================================ Letzte Umfragen ========= -->
+  <section class="section">
+    <header>
+      <h2>Letzte Umfragen</h2>
+      <p class="sub">
+        Rohwerte, ungeglättet.
+        <a th:href="@{/{slug}/umfragen(slug=${detail.parliament.slug})}">Alle Umfragen ansehen →</a>
+      </p>
+    </header>
+    <div class="card table-scroll">
+      <table class="data">
+        <thead>
+        <tr>
+          <th class="left">Institut</th>
+          <th class="left">Zeitraum</th>
+          <th th:each="party : ${detail.parties}">
+            <span class="party-head">
+              <span class="key" th:style="'background:' + ${party.colorLight}"
+                    th:attr="data-color-light=${party.colorLight},data-color-dark=${party.colorDark}"></span>
+              <span th:text="${party.shortcut}">X</span>
+            </span>
+          </th>
+          <th>Befragte</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="poll,it : ${detail.polls}" th:if="${it.index < 15}">
+          <td class="left" th:text="${poll.institute ?: '–'}">Institut</td>
+          <td class="left dim"
+              th:text="${poll.periodStart != null
+                        ? #temporals.format(poll.periodStart, 'd.M.') + '–' + #temporals.format(poll.periodEnd, 'd.M.yy')
+                        : #temporals.format(poll.published, 'd.M.yy')}">Zeitraum</td>
+          <td th:each="party : ${detail.parties}" th:with="v=${poll.results.get(party.id)}"
+              th:classappend="${v == null ? 'dim' : ''}"
+              th:text="${v == null ? '–' : #numbers.formatDecimal(v, 1, 1, 'COMMA')}">–</td>
+          <td class="dim" th:text="${poll.surveyed ?: '–'}">0</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+
+<script type="application/json" id="bootstrap" th:utext="${bootstrap}">{}</script>
+<script type="module" th:src="@{/js/app.js}"></script>
+</body>
+</html>

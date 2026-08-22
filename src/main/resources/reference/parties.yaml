@@ -1,0 +1,158 @@
+# Parteifarben und Sortierung.
+#
+# WICHTIG — bewusste Abweichung von den ueblichen Palettenregeln:
+# Parteifarben sind semantisch vorgegeben. SPD-Rot, Gruenen-Gruen und FDP-Gelb
+# nebeneinander sind genau das Paar, das Rot-Gruen-Sehschwaechen nicht trennen
+# koennen (geprueft: adjacent ΔE 3.7 im Deutan-Modell, Zielwert waere >= 8).
+# Eine "bessere" Palette waere fuer deutsche Leser schlicht falsch.
+#
+# Konsequenz: Farbe ist hier NICHT der Identitaetskanal. Jede Serie traegt
+# zusaetzlich immer
+#   - eine Direktbeschriftung mit dem Parteikuerzel am Kurvenende,
+#   - einen Legendeneintrag mit Text,
+#   - das Kuerzel im Crosshair-Tooltip,
+#   - eine Tabellenansicht als vollwertige Alternative,
+#   - optional (Schalter "Muster") zusaetzliche Strichmuster.
+#
+# Die Dark-Mode-Werte sind eigenstaendig gewaehlt, keine Aufhellung:
+# Schwarz (CDU/CSU) und Gelb (FDP) verschwinden sonst.
+#
+# "spectrum" ordnet die Parteien fuer den Sitzbogen von links nach rechts —
+# die uebliche Sitzordnung deutscher Parlamente. Das ist eine Konvention, keine
+# Bewertung; ohne sie wuerde der Bogen nach Fraktionsgroesse sortieren und
+# saehe fuer jeden, der Sitzbogen kennt, falsch aus. Parteien ohne Wert landen
+# am rechten Rand.
+#
+# Schluessel ist das DAWUM-Kuerzel.
+
+parties:
+  - shortcut: "CDU/CSU"
+    light: "#2C2C2C"
+    dark: "#E4E4E7"
+    order: 10
+    spectrum: 70
+  - shortcut: "CDU"
+    light: "#2C2C2C"
+    dark: "#E4E4E7"
+    order: 11
+    spectrum: 71
+  - shortcut: "CSU"
+    light: "#2C2C2C"
+    dark: "#E4E4E7"
+    order: 12
+    spectrum: 72
+  - shortcut: "SPD"
+    light: "#E3000F"
+    dark: "#FF5A5F"
+    order: 20
+    spectrum: 30
+  - shortcut: "Grüne"
+    light: "#3B8F2E"
+    dark: "#5CC24A"
+    order: 30
+    spectrum: 40
+  - shortcut: "FDP"
+    light: "#D9A400"
+    dark: "#F5CE28"
+    order: 40
+    spectrum: 60
+  - shortcut: "AfD"
+    light: "#0090D4"
+    dark: "#38B6F0"
+    order: 50
+    spectrum: 90
+  - shortcut: "Linke"
+    light: "#C8377E"
+    dark: "#F062A6"
+    order: 60
+    spectrum: 10
+  - shortcut: "BSW"
+    light: "#6B2E7A"
+    dark: "#8E7CF0"
+    order: 65
+    spectrum: 20
+  - shortcut: "Freie Wähler"
+    light: "#E07C00"
+    dark: "#FFA23A"
+    order: 70
+    spectrum: 65
+  - shortcut: "SSW"
+    light: "#0B5FA5"
+    dark: "#6FB3EE"
+    order: 75
+    spectrum: 50
+  - shortcut: "BVB/FW"
+    light: "#A08A2B"
+    dark: "#D4BC5E"
+    order: 80
+    spectrum: 66
+  - shortcut: "Volt"
+    light: "#4B2A87"
+    dark: "#A98BE0"
+    order: 85
+    spectrum: 46
+  - shortcut: "Die PARTEI"
+    light: "#B5152B"
+    dark: "#F07A88"
+    order: 86
+    spectrum: 49
+  - shortcut: "Tierschutzpartei"
+    light: "#00845A"
+    dark: "#3FCFA0"
+    order: 87
+    spectrum: 47
+  - shortcut: "Piraten"
+    light: "#D96A00"
+    dark: "#FFA85C"
+    order: 88
+    spectrum: 45
+  - shortcut: "ÖDP"
+    light: "#C25400"
+    dark: "#FF9257"
+    order: 89
+    spectrum: 48
+  - shortcut: "Familie"
+    light: "#C2007A"
+    dark: "#F573BE"
+    order: 90
+    spectrum: 55
+  - shortcut: "Bayernpartei"
+    light: "#12659E"
+    dark: "#63B4E8"
+    order: 91
+    spectrum: 67
+  - shortcut: "BD"
+    light: "#1D4E89"
+    dark: "#6E9FD8"
+    order: 92
+    spectrum: 80
+  - shortcut: "WerteUnion"
+    light: "#264E70"
+    dark: "#7FA6C6"
+    order: 93
+    spectrum: 78
+  - shortcut: "NPD"
+    light: "#7A4A1E"
+    dark: "#C4915C"
+    order: 94
+    spectrum: 95
+  - shortcut: "Plus Brandenburg"
+    light: "#8A3391"
+    dark: "#CE85D4"
+    order: 95
+    spectrum: 52
+  - shortcut: "BfTh"
+    light: "#5B4B8A"
+    dark: "#A497D6"
+    order: 96
+    spectrum: 85
+  - shortcut: "bunt.saar"
+    light: "#5C8A3C"
+    dark: "#9AC97A"
+    order: 97
+    spectrum: 51
+  - shortcut: "Sonstige"
+    light: "#8A8F98"
+    dark: "#9BA1A9"
+    order: 999
+    spectrum: 99

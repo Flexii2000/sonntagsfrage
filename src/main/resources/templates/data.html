@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head(${pageTitle})}"></head>
+<body>
+<header th:replace="~{fragments :: header('daten')}"></header>
+
+<main class="wrap">
+  <section class="section prose">
+    <h1>Daten &amp; Methodik</h1>
+
+    <div class="stale" th:if="${lastError != null}">
+      Der letzte Importversuch ist fehlgeschlagen. Angezeigt wird der letzte
+      erfolgreich geladene Stand.
+      <br><code th:text="${lastError}">Fehler</code>
+    </div>
+
+    <h2>Woher die Umfragen kommen</h2>
+    <p>
+      Alle Umfragewerte stammen aus der Datenbank von
+      <a href="https://dawum.de/" rel="noopener">DAWUM</a>, die die Sonntagsfragen
+      aller relevanten deutschen Institute sammelt — Allensbach, Forsa,
+      Forschungsgruppe Wahlen, INSA, Infratest dimap, Ipsos, Verian, YouGov und
+      weitere. DAWUM stellt den kompletten Bestand als offene Schnittstelle
+      bereit, lizenziert unter der
+      <a href="https://opendatacommons.org/licenses/odbl/1-0/" rel="noopener">ODC Open Database License</a>.
+    </p>
+    <p>
+      Das ist der Grund, warum diese Seite DAWUM nutzt und nicht etwa
+      wahlrecht.de abgreift: die Daten sind ausdrücklich zur Weiterverwendung
+      freigegeben. Aus derselben Überlegung ist die
+      <a th:href="@{/api/parliaments}">API dieser Seite</a> ebenfalls offen und
+      steht unter derselben Lizenz.
+    </p>
+    <ul>
+      <li>Aktuell geladen: <b th:text="${surveyCount}">0</b> Umfragen</li>
+      <li>Stand der Quelle: <code th:text="${dawumLastUpdate ?: 'unbekannt'}">–</code></li>
+      <li>Letzter erfolgreicher Abruf: <code th:text="${lastRun ?: 'noch keiner'}">–</code></li>
+      <li>Abrufrhythmus: zweimal pro Stunde, aber nur dann mit Datenübertragung,
+        wenn sich bei DAWUM tatsächlich etwas geändert hat</li>
+    </ul>
+
+    <h2>Wie die Kurven entstehen</h2>
+    <p>
+      Eine einzelne Umfrage ist eine Momentaufnahme mit einer Fehlerspanne von
+      typischerweise zwei bis drei Punkten. Wer jede neue Zahl für sich nimmt,
+      liest vor allem Rauschen. Deshalb zeigt diese Seite die Rohwerte nur auf
+      Wunsch und ansonsten eine geglättete Kurve.
+    </p>
+    <p>
+      Verfahren: ein <b>Gauß-gewichteter gleitender Durchschnitt</b>. Für jeden
+      Tag der Kurve geht jede Umfrage mit dem Gewicht
+      <code>exp(−0,5 · ((t − t_umfrage) / σ)²)</code> ein, mit
+      σ = <b th:text="${sigmaDays}">10</b> Tagen. Umfragen, die weiter als 3 σ
+      entfernt liegen, zählen nicht mehr mit; wo im Fenster zu wenig Daten
+      liegen, bricht die Kurve ab, statt zu raten.
+    </p>
+    <p>
+      Kein LOESS, keine Modellierung: der Gauß-Kernel lässt sich in einem Satz
+      erklären und nachrechnen. Bei Wahlumfragen ist das mehr wert als der letzte
+      Prozentpunkt Anpassungsgüte.
+    </p>
+    <p>
+      Jede Umfrage wird auf die <b>Mitte ihres Erhebungszeitraums</b> datiert,
+      nicht auf den Veröffentlichungstag. Eine Umfrage, die vom 1. bis 14. erhoben
+      und am 21. veröffentlicht wird, beschreibt die Stimmung um den 7. — sie
+      später einzuordnen verschiebt den gesamten Verlauf nach hinten.
+    </p>
+
+    <h2>Sitzprojektion und Koalitionen</h2>
+    <p>
+      Die Sitzverteilung rechnet den geglätteten Stand nach
+      <b>Sainte-Laguë/Schepers</b> auf die reguläre Größe des jeweiligen
+      Parlaments um, nachdem die Sperrklausel angewendet wurde (in der Regel 5 %;
+      der SSW in Schleswig-Holstein ist als Minderheitenpartei befreit, bei der
+      Europawahl gilt in Deutschland keine).
+    </p>
+    <p>
+      Was bewusst <em>nicht</em> modelliert wird: Überhang- und
+      Ausgleichsmandate, Direktmandate und die Grundmandatsklausel. Aus einem
+      landesweiten Prozentwert lassen die sich nicht ableiten. Die Projektion ist
+      deshalb eine Näherung, keine Sitzvorhersage.
+    </p>
+    <p>
+      Der Koalitionsrechner listet alle Bündnisse mit rechnerischer Mehrheit, bei
+      denen kein Partner überflüssig ist. Es wird nicht danach gefiltert, wer mit
+      wem koalieren will oder wen ausschließt — das wäre eine politische
+      Einschätzung, die eine Umfrageseite nicht treffen sollte.
+    </p>
+
+    <h2>Institutsvergleich</h2>
+    <p>
+      Für jedes Institut und jede Partei wird die mittlere Abweichung vom
+      geglätteten Konsens berechnet — und zwar von einem Konsens, in den die
+      eigenen Umfragen des Instituts <em>nicht</em> eingehen. Sonst würde ein
+      Institut, das besonders oft misst, seinen eigenen Vergleichsmaßstab setzen.
+    </p>
+    <p>
+      Solche Abweichungen sind normal und meist methodisch begründet
+      (Erhebungsart, Gewichtung, Behandlung von Unentschlossenen). Sie sind kein
+      Vorwurf, aber sie erklären, warum zwei Umfragen derselben Woche
+      unterschiedlich ausfallen können.
+    </p>
+
+    <h2>Welche Wahl vorne steht</h2>
+    <p>
+      Die Startseite zeigt automatisch das gerade interessanteste Parlament:
+      steht innerhalb von <b th:text="${preElectionDays}">21</b> Tagen eine Wahl
+      an, ist es diese; liegt eine Wahl weniger als
+      <b th:text="${postElectionDays}">7</b> Tage zurück, ebenfalls; sonst der
+      Bundestag. Termine, die noch nicht amtlich bekanntgegeben sind, lösen das
+      bewusst nicht aus.
+    </p>
+
+    <h2>Wahltermine und Wahlergebnisse</h2>
+    <p>
+      Die kommen nicht aus DAWUM, sondern sind von Hand aus den amtlichen Quellen
+      gepflegt: der <a href="https://www.bundeswahlleiterin.de/" rel="noopener">Bundeswahlleiterin</a>
+      sowie den statistischen Landesämtern und Landeswahlleitungen. Jeder Eintrag
+      trägt im Datensatz seine Quelle.
+    </p>
+
+    <h2>Was diese Seite nicht ist</h2>
+    <p>
+      Keine Prognose. Umfragen messen, wie Menschen heute antworten — nicht, wie
+      sie am Wahltag abstimmen. Der geglättete Verlauf macht Bewegungen sichtbar,
+      er verlängert sie nicht in die Zukunft.
+    </p>
+  </section>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

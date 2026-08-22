@@ -1,0 +1,139 @@
+# Stammdaten der Parlamente, die DAWUM nicht liefert: URL-Slug, Ebene,
+# Sperrklausel, regulaere Sitzzahl und Sortierung.
+#
+# Die IDs sind die DAWUM-Parlaments-IDs.
+#
+# seats = die REGULAERE (gesetzliche) Groesse des Parlaments. Sie ist die Basis
+# der Sitzprojektion. Die tatsaechliche Groesse nach einer Wahl weicht durch
+# Ueberhang- und Ausgleichsmandate ab — das laesst sich aus einer Umfrage
+# ohnehin nicht ableiten und wird im UI als Vereinfachung ausgewiesen.
+
+parliaments:
+  - id: 0
+    slug: bundestag
+    level: BUND
+    threshold: 5.0
+    seats: 630
+    order: 0
+
+  - id: 1
+    slug: baden-wuerttemberg
+    level: LAND
+    threshold: 5.0
+    seats: 120
+    order: 10
+
+  - id: 2
+    slug: bayern
+    level: LAND
+    threshold: 5.0
+    seats: 180
+    order: 20
+
+  - id: 3
+    slug: berlin
+    level: LAND
+    threshold: 5.0
+    seats: 130
+    order: 30
+
+  - id: 4
+    slug: brandenburg
+    level: LAND
+    threshold: 5.0
+    seats: 88
+    order: 40
+
+  - id: 5
+    slug: bremen
+    level: LAND
+    threshold: 5.0
+    seats: 87
+    order: 50
+
+  - id: 6
+    slug: hamburg
+    level: LAND
+    threshold: 5.0
+    seats: 121
+    order: 60
+
+  - id: 7
+    slug: hessen
+    level: LAND
+    threshold: 5.0
+    seats: 110
+    order: 70
+
+  - id: 8
+    slug: mecklenburg-vorpommern
+    level: LAND
+    threshold: 5.0
+    seats: 71
+    order: 80
+
+  - id: 9
+    slug: niedersachsen
+    level: LAND
+    threshold: 5.0
+    seats: 135
+    order: 90
+
+  - id: 10
+    slug: nordrhein-westfalen
+    level: LAND
+    threshold: 5.0
+    seats: 181
+    order: 100
+
+  - id: 11
+    slug: rheinland-pfalz
+    level: LAND
+    threshold: 5.0
+    seats: 101
+    order: 110
+
+  - id: 12
+    slug: saarland
+    level: LAND
+    threshold: 5.0
+    seats: 51
+    order: 120
+
+  - id: 13
+    slug: sachsen
+    level: LAND
+    threshold: 5.0
+    seats: 120
+    order: 130
+
+  - id: 14
+    slug: sachsen-anhalt
+    level: LAND
+    threshold: 5.0
+    seats: 83
+    order: 140
+
+  - id: 15
+    slug: schleswig-holstein
+    level: LAND
+    threshold: 5.0
+    seats: 69
+    # Der SSW ist als Partei der daenischen Minderheit von der Sperrklausel befreit.
+    thresholdExempt: [SSW]
+    order: 150
+
+  - id: 16
+    slug: thueringen
+    level: LAND
+    threshold: 5.0
+    seats: 88
+    order: 160
+
+  - id: 17
+    slug: europaparlament
+    level: EU
+    # Bei der Europawahl gilt in Deutschland seit 2014 keine Sperrklausel.
+    threshold: 0.0
+    seats: 96
+    order: 900

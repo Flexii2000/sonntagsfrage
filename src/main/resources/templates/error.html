@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Nicht gefunden')}"></head>
+<body>
+<header th:replace="~{fragments :: header('')}"></header>
+<main class="wrap">
+  <section class="section prose">
+    <h1 th:text="${status} ?: 'Fehler'">Fehler</h1>
+    <p th:text="${error} ?: 'Diese Seite gibt es nicht.'">Diese Seite gibt es nicht.</p>
+    <p><a th:href="@{/}">Zurück zur Übersicht</a></p>
+  </section>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

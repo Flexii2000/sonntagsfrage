@@ -1,0 +1,73 @@
+spring:
+  application:
+    name: wahlen
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:wahlen}
+    username: ${DB_USER:wahlen}
+    password: ${DB_PASSWORD:wahlen}
+    hikari:
+      maximum-pool-size: 8
+
+  jpa:
+    # Flyway besitzt das Schema; Hibernate darf es nur pruefen.
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 100
+          time_zone: Europe/Berlin
+        order_inserts: true
+        order_updates: true
+
+  flyway:
+    enabled: true
+
+  thymeleaf:
+    cache: true
+
+  jackson:
+    default-property-inclusion: non_null
+
+server:
+  port: 8080
+  # Die App haengt unter fherrmann.com/wahlen — nginx reicht den Pfad
+  # unveraendert durch, die App bringt ihn selbst mit.
+  servlet:
+    context-path: /wahlen
+  forward-headers-strategy: framework
+  compression:
+    enabled: true
+    mime-types: text/html,text/css,application/javascript,application/json,image/svg+xml
+    min-response-size: 1024
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  level:
+    com.fherrmann.wahlen: INFO
+
+wahlen:
+  dawum:
+    base-url: https://api.dawum.de
+    user-agent: "wahlen.fherrmann.com/1.0 (+https://fherrmann.com/wahlen)"
+    import-on-startup: true
+    import-cron: "0 7,37 * * * *"
+  trend:
+    # Standardabweichung des Gauss-Kernels. 10 Tage glaettet das Rauschen
+    # einzelner Institute weg, ohne echte Bewegungen zu verschlucken.
+    sigma-days: 10
+    cutoff-sigmas: 3
+    max-points: 400
+  featured:
+    pre-election-days: 21
+    post-election-days: 7

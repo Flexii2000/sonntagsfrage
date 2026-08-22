@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head th:fragment="head(title)">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${title} + ' · fherrmann.com'">Wahlen · fherrmann.com</title>
+  <meta name="description"
+        content="Sonntagsfrage zur Bundestagswahl und zu allen Landtagswahlen — Verlauf, Sitzverteilung, Koalitionen und Institutsvergleich.">
+  <meta name="color-scheme" content="light dark">
+  <link rel="stylesheet" th:href="@{/css/wahlen.css}">
+  <link rel="icon"
+        href="data:image/svg+xml,&lt;svg xmlns=&#39;http://www.w3.org/2000/svg&#39; viewBox=&#39;0 0 100 100&#39;&gt;&lt;text y=&#39;.9em&#39; font-size=&#39;90&#39;&gt;🗳️&lt;/text&gt;&lt;/svg&gt;">
+</head>
+
+<body>
+
+<header class="site-header" th:fragment="header(active)">
+  <div class="wrap">
+    <a class="brand" th:href="@{/}">Wahlen <span>· fherrmann.com</span></a>
+    <nav class="site-nav">
+      <a th:href="@{/}" th:attrappend="aria-current=${active == 'home' ? 'page' : null}">Übersicht</a>
+      <a th:href="@{/bundestag}" th:attrappend="aria-current=${active == 'bundestag' ? 'page' : null}">Bundestag</a>
+      <a th:href="@{/daten}" th:attrappend="aria-current=${active == 'daten' ? 'page' : null}">Daten</a>
+      <a href="https://fherrmann.com">fherrmann.com</a>
+    </nav>
+  </div>
+</header>
+
+<footer class="site-footer" th:fragment="footer">
+  <div class="wrap">
+    <p>
+      Umfragedaten von <a href="https://dawum.de/" rel="noopener">DAWUM</a>,
+      lizenziert unter der
+      <a href="https://opendatacommons.org/licenses/odbl/1-0/" rel="noopener">ODbL</a>.
+      Diese Aufbereitung und ihre <a th:href="@{/api/parliaments}">API</a> stehen unter derselben Lizenz.
+    </p>
+    <p>
+      Wahltermine und amtliche Ergebnisse von der Bundeswahlleiterin und den
+      statistischen Landesämtern. <a th:href="@{/daten}">Quellen und Methodik</a>.
+    </p>
+    <p>Keine Prognose — Umfragen sind Momentaufnahmen mit Fehlerspannen.</p>
+  </div>
+</footer>
+
+<!-- Ein Balken einer Partei: Name, Balken, Wert, Veraenderung. -->
+<div th:fragment="figureRow(party, value, change, max, reference)" class="figure-row">
+  <span class="nm">
+    <span class="key" th:style="'background:' + ${party.colorLight}"
+          th:attr="data-color-light=${party.colorLight},data-color-dark=${party.colorDark}"></span>
+    <span th:text="${party.shortcut}">Partei</span>
+  </span>
+  <span class="bar-track">
+    <span class="bar-fill"
+          th:style="'width:' + ${#numbers.formatDecimal(value * 100.0 / max, 1, 1, 'POINT')} + '%;background:' + ${party.colorLight}"
+          th:attr="data-color-light=${party.colorLight},data-color-dark=${party.colorDark}"></span>
+    <span class="ref" th:if="${reference != null}"
+          th:style="'left:' + ${#numbers.formatDecimal(reference * 100.0 / max, 1, 1, 'POINT')} + '%'"
+          th:title="'Ergebnis der letzten Wahl: ' + ${#numbers.formatDecimal(reference, 1, 1, 'COMMA')} + ' %'"></span>
+  </span>
+  <span class="vl">
+    <span th:text="${#numbers.formatDecimal(value, 1, 1, 'COMMA')} + ' %'">0,0 %</span>
+    <span th:if="${change != null}" class="delta"
+          th:classappend="${change > 0.05 ? 'up' : (change < -0.05 ? 'down' : 'flat')}"
+          th:text="${(change > 0 ? '+' : '') + #numbers.formatDecimal(change, 1, 1, 'COMMA')}">+0,0</span>
+  </span>
+</div>
+
+</body>
+</html>
