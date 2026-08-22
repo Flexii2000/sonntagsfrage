@@ -13,6 +13,12 @@ RUN mvn -q -B -DskipTests package
 FROM eclipse-temurin:25-jre
 WORKDIR /app
 
+# curl fuer den Container-Healthcheck — das JRE-Image bringt weder curl noch
+# wget mit, ein Healthcheck ohne das bleibt stumm auf "unhealthy" stehen.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl \
+ && rm -rf /var/lib/apt/lists/*
+
 # Nicht als root laufen.
 RUN groupadd --system wahlen && useradd --system --gid wahlen --home /app wahlen
 

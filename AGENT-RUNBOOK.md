@@ -202,6 +202,13 @@ Beim Bau dieses Projekts jeweils erst nach einem Fehlstart gefunden:
    `ObjectMapper`-Bean lässt sich nicht injizieren. Die **Annotationen**
    bleiben `com.fasterxml.jackson.annotation.*` — das ist kein Fehler.
 
+### ⚠️ Das JRE-Image bringt weder `curl` noch `wget` mit
+`eclipse-temurin:25-jre` hat keins von beidem. Ein Healthcheck, der eines
+davon aufruft, scheitert dauerhaft mit `executable file not found in $PATH` —
+der Container bleibt für immer auf `health: starting` bzw. `unhealthy`, obwohl
+die App tadellos läuft. Deshalb installiert das Dockerfile `curl` nach. Wer
+den Healthcheck ändert: vorher `docker exec wahlen-app command -v <tool>`.
+
 ### ⚠️ Postgres 18: Volume gehört an `/var/lib/postgresql`
 Nicht an `/var/lib/postgresql/data`. Die 18er-Images legen die Daten in ein
 versionsspezifisches Unterverzeichnis und **verweigern den Start**, wenn direkt
