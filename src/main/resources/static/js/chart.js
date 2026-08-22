@@ -238,33 +238,68 @@ function draw(svg, tooltip, host, data, state) {
   }
 
   // --- Linien -------------------------------------------------------------
+  //
+  // Wo ueber laengere Zeit gar nicht befragt wurde, liefert die Glaettung
+  // bewusst keinen Wert. Die Luecke einfach offen zu lassen sieht aber wie ein
+  // Fehler aus (und genau so wurde sie auch gemeldet). Deshalb wird ueber die
+  // Luecke eine duenne gestrichelte Bruecke gezogen: der Verlauf bleibt als
+  // Linie lesbar, und man sieht trotzdem, wo interpoliert statt gemessen ist.
   const linesG = el('g', {}, svg);
   const ends = [];
+  let hasGaps = false;
+
   for (const s of visible) {
     const party = partyById.get(s.partyId) || {};
     const color = partyColor(party);
-    let d = '';
-    let pen = false;
-    let lastPoint = null;
+
+    // Zusammenhaengende Abschnitte mit Daten sammeln.
+    const runs = [];
+    let run = null;
     s.values.forEach((v, i) => {
-      if (v === null) { pen = false; return; }
-      const px = X(xs[i]);
-      const py = Y(v);
-      d += `${pen ? 'L' : 'M'}${px.toFixed(1)},${py.toFixed(1)}`;
-      pen = true;
-      lastPoint = { x: px, y: py, v };
+      if (v === null) { run = null; return; }
+      if (!run) { run = []; runs.push(run); }
+      run.push({ x: X(xs[i]), y: Y(v), v });
     });
-    if (!d) continue;
+    if (!runs.length) continue;
 
-    el('path', {
-      d, stroke: color, class: 'series-line',
-      'stroke-dasharray': state.patterns ? dashFor(s.partyId) : null,
-    }, linesG);
-
-    if (lastPoint) {
-      ends.push({ partyId: s.partyId, shortcut: party.shortcut || '?', color, ...lastPoint });
+    // Bruecken zuerst, damit sie unter den echten Linien liegen.
+    for (let i = 1; i < runs.length; i++) {
+      const from = runs[i - 1][runs[i - 1].length - 1];
+      const to = runs[i][0];
+      hasGaps = true;
+      el('line', {
+        x1: from.x.toFixed(1), y1: from.y.toFixed(1),
+        x2: to.x.toFixed(1), y2: to.y.toFixed(1),
+        stroke: color, 'stroke-width': 1.4, 'stroke-dasharray': '2 4',
+        'stroke-linecap': 'round', opacity: 0.5,
+      }, linesG);
     }
+
+    for (const points of runs) {
+      // Ein einzelner Punkt ergibt keinen Pfad — als Marke zeichnen, sonst
+      // verschwindet eine isolierte Umfrage komplett.
+      if (points.length === 1) {
+        el('circle', { cx: points[0].x, cy: points[0].y, r: 2.4, fill: color }, linesG);
+        continue;
+      }
+      const d = points
+        .map((pt, i) => `${i ? 'L' : 'M'}${pt.x.toFixed(1)},${pt.y.toFixed(1)}`)
+        .join('');
+      el('path', {
+        d, stroke: color, class: 'series-line',
+        'stroke-dasharray': state.patterns ? dashFor(s.partyId) : null,
+      }, linesG);
+    }
+
+    const last = runs[runs.length - 1];
+    const lastPoint = last[last.length - 1];
+    ends.push({ partyId: s.partyId, shortcut: party.shortcut || '?', color, ...lastPoint });
   }
+
+  // Die Seite blendet daraufhin den erklaerenden Hinweis ein.
+  host.dispatchEvent(new CustomEvent('chart:rendered', {
+    detail: { hasGaps }, bubbles: false,
+  }));
 
   // --- Direktbeschriftung am Kurvenende -----------------------------------
   // Bei Ueberschneidung werden die Labels auseinandergeschoben UND mit einer
@@ -283,13 +318,17 @@ function draw(svg, tooltip, host, data, state) {
   const MAX_SHIFT = 13;
   for (const e of ends) {
     const trueY = Y(e.v);
-    el('circle', { cx: pad.left + plotW, cy: trueY, r: 3.5, fill: e.color,
+
+    // Der Endpunkt sitzt dort, wo die Daten tatsaechlich aufhoeren — nicht am
+    // rechten Rand. In Laendern, in denen seit Monaten nicht mehr befragt
+    // wurde, endet die Kurve sichtbar frueh, statt Aktualitaet vorzutaeuschen.
+    el('circle', { cx: e.x, cy: trueY, r: 3.5, fill: e.color,
                    stroke: surface, 'stroke-width': 2 }, labelsG);
     if (Math.abs(e.y - trueY) > MAX_SHIFT) continue;
 
-    const lx = pad.left + plotW + 6;
-    if (Math.abs(e.y - trueY) > 1.5) {
-      el('line', { x1: pad.left + plotW + 1, y1: trueY, x2: lx - 2, y2: e.y,
+    const lx = e.x + 7;
+    if (Math.abs(e.y - trueY) > 1.5 || e.x < pad.left + plotW - 1) {
+      el('line', { x1: e.x + 3.5, y1: trueY, x2: lx - 2, y2: e.y,
                    stroke: e.color, class: 'leader' }, labelsG);
     }
     const t = el('text', { x: lx, y: e.y + 3.8, class: 'end-label',
@@ -425,15 +464,33 @@ export function sparkline(svg, data) {
     for (const s of data.series) {
       const party = partyById.get(s.partyId);
       if (!party) continue;
-      let d = '';
-      let pen = false;
+      const color = partyColor(party);
+
+      // Gleiche Logik wie im grossen Chart: Luecken werden gestrichelt
+      // ueberbrueckt statt die Linie abreissen zu lassen.
+      const runs = [];
+      let run = null;
       s.values.forEach((v, i) => {
-        if (v === null) { pen = false; return; }
-        d += `${pen ? 'L' : 'M'}${X(xs[i]).toFixed(1)},${Y(v).toFixed(1)}`;
-        pen = true;
+        if (v === null) { run = null; return; }
+        if (!run) { run = []; runs.push(run); }
+        run.push({ x: X(xs[i]), y: Y(v) });
       });
-      if (d) {
-        el('path', { d, stroke: partyColor(party), fill: 'none',
+
+      for (let i = 1; i < runs.length; i++) {
+        const from = runs[i - 1][runs[i - 1].length - 1];
+        const to = runs[i][0];
+        el('line', { x1: from.x.toFixed(1), y1: from.y.toFixed(1),
+                     x2: to.x.toFixed(1), y2: to.y.toFixed(1),
+                     stroke: color, 'stroke-width': 1.2,
+                     'stroke-dasharray': '1.5 2.5', opacity: 0.5 }, svg);
+      }
+
+      for (const points of runs) {
+        if (points.length < 2) continue;
+        const d = points
+          .map((pt, i) => `${i ? 'L' : 'M'}${pt.x.toFixed(1)},${pt.y.toFixed(1)}`)
+          .join('');
+        el('path', { d, stroke: color, fill: 'none',
                      'stroke-width': 1.6, 'stroke-linejoin': 'round',
                      'stroke-linecap': 'round' }, svg);
       }

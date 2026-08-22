@@ -52,6 +52,10 @@
         <span th:text="${#numbers.formatDecimal(detail.parliament.threshold, 1, 0, 'COMMA')}">5</span>-%-Sperrklausel.
         <a th:href="@{/daten}">Wie das gerechnet wird</a>.
       </p>
+        <p class="hint gap-note" hidden>
+          Gestrichelte Abschnitte überbrücken Zeiträume, in denen gar nicht
+          befragt wurde — dort ist die Linie interpoliert, nicht gemessen.
+        </p>
     </div>
   </section>
 
@@ -59,6 +63,14 @@
   <section class="section split">
     <div class="card">
       <h2>Aktueller Stand</h2>
+      <p class="sub">
+        Stand <span th:text="${#temporals.format(detail.current.asOf, 'd. MMMM yyyy')}">Datum</span><th:block
+          th:if="${detail.parliament.latestSurvey != null
+                  and T(java.time.temporal.ChronoUnit).DAYS.between(detail.parliament.latestSurvey, T(java.time.LocalDate).now()) > 90}">
+          — seit
+          <span th:text="${T(java.time.temporal.ChronoUnit).DAYS.between(detail.parliament.latestSurvey, T(java.time.LocalDate).now())}">0</span>
+          Tagen wurde hier nicht mehr befragt</th:block>.
+      </p>
       <p class="sub" th:if="${detail.lastElection != null}">
         Strich im Balken: Ergebnis der Wahl vom
         <span th:text="${#temporals.format(detail.lastElection.date, 'd. MMMM yyyy')}">Datum</span><th:block
@@ -107,11 +119,6 @@
   <section class="section" th:if="${!detail.coalitions.isEmpty()}">
     <header>
       <h2>Rechnerische Mehrheiten</h2>
-      <p class="sub">
-        Alle Bündnisse, die auf Basis der Projektion eine Mehrheit hätten und bei denen kein
-        Partner überflüssig ist. Rein arithmetisch — wer mit wem koalieren würde, bewertet
-        diese Seite nicht.
-      </p>
     </header>
     <div class="card">
       <ul class="coalitions">

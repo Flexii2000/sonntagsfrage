@@ -55,6 +55,15 @@ function buildLegend(container, detail, chart, hidden) {
   }
 }
 
+/** Blendet den Hinweis zu gestrichelten Abschnitten ein, sobald welche auftreten. */
+function wireGapNote(host) {
+  const note = document.querySelector('.gap-note');
+  if (!note) return;
+  host.addEventListener('chart:rendered', (ev) => {
+    note.hidden = !ev.detail.hasGaps;
+  });
+}
+
 function markersFor(detail) {
   const markers = [];
   if (detail.lastElection) {
@@ -82,6 +91,7 @@ if (boot.hero) {
   const host = document.getElementById('hero-chart');
   if (host) {
     const hidden = new Set();
+    wireGapNote(host);
     const chart = trendChart(host, chartData(boot.hero), {
       threshold: boot.hero.parliament.threshold || null,
       hidden,
@@ -113,6 +123,7 @@ if (boot.detail && document.getElementById('detail-chart')) {
   const sigmaNode = document.getElementById('sigma');
   if (sigmaNode) sigmaNode.textContent = String(detail.trend.sigmaDays).replace('.0', '');
 
+  wireGapNote(host);
   const chart = trendChart(host, chartData(detail), {
     threshold: detail.parliament.threshold || null,
     hidden,

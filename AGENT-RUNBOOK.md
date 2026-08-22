@@ -231,6 +231,19 @@ eigenes, kurzes Fenster von 120 Tagen, damit sie die jüngste Bewegung nicht
 wegglätten. Wer hier schraubt: beide Stellen prüfen, `sigmaDays` steht im
 API-Feld `trend.sigmaDays` und wird im UI ausgewiesen.
 
+### ⚠️ Lücken in der Kurve sind echt — sie werden überbrückt, nicht gefüllt
+Wo monatelang gar nicht befragt wurde (Bremen: 3 Umfragen im Jahr, Saarland:
+8 im Fenster), liefert die Glättung bewusst keinen Wert. Die API gibt dort
+`null` zurück. Das Chart zieht darüber eine **dünne gestrichelte Brücke** und
+blendet den Hinweis `.gap-note` ein — der Verlauf bleibt lesbar, und man sieht
+trotzdem, wo interpoliert statt gemessen wurde.
+
+Ebenso: der **Endpunkt einer Serie sitzt am letzten Datenpunkt**, nicht am
+rechten Rand. Beim Saarland endet die Kurve dadurch sichtbar im Februar,
+obwohl die Achse bis heute läuft. Das ist Absicht — es macht veraltete
+Datenstände sichtbar, statt Aktualität vorzutäuschen. Wer den Endpunkt wieder
+an den Rand legt, baut genau diese Täuschung ein.
+
 ### ⚠️ Serien mit Löchern
 Parteien, die in weniger als 30 % der Umfragen eines Zeitraums abgefragt
 werden (typisch: Freie Wähler beim Bundestag), fliegen aus dem Chart —

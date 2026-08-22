@@ -24,8 +24,15 @@ import org.springframework.stereotype.Component;
 @Component
 public class TrendCalculator {
 
-    /** Unterhalb dieses Gesamtgewichts gilt ein Stuetztag als unbelegt. */
-    private static final double MIN_TOTAL_WEIGHT = 0.35;
+    /**
+     * Unterhalb dieses Gesamtgewichts gilt ein Stuetztag als unbelegt.
+     *
+     * <p>0,2 entspricht einer einzelnen Umfrage in 1,79 sigma Entfernung. Das
+     * schliesst die kurzen Luecken, ohne aus einer weit entfernten Einzelumfrage
+     * noch eine Aussage zu machen. Was danach an Luecken bleibt, ist echt und
+     * wird im Chart als gestrichelte Bruecke gezeigt statt weginterpoliert.
+     */
+    private static final double MIN_TOTAL_WEIGHT = 0.2;
 
     /** Obergrenze der automatischen Glaettungsbreite — darueber wird es Brei. */
     private static final double MAX_SIGMA_DAYS = 45;
