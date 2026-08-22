@@ -8,7 +8,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 public record WahlenProperties(
         @DefaultValue Dawum dawum,
         @DefaultValue Trend trend,
-        @DefaultValue Featured featured) {
+        @DefaultValue Featured featured,
+        @DefaultValue Cors cors) {
 
     public record Dawum(
             @DefaultValue("https://api.dawum.de") String baseUrl,
@@ -23,6 +24,11 @@ public record WahlenProperties(
             @DefaultValue("3") double cutoffSigmas,
             /** Maximale Anzahl Stuetzstellen einer Trendkurve. */
             @DefaultValue("400") int maxPoints) {
+    }
+
+    public record Cors(
+            /** Herkuenfte, die die JSON-API im Browser lesen duerfen. */
+            @DefaultValue("https://status.fherrmann.com") java.util.List<String> allowedOrigins) {
     }
 
     public record Featured(
