@@ -3,13 +3,13 @@
 # Einmalige Einrichtung von fherrmann.com/wahlen auf dem Heimserver.
 # Muss mit sudo laufen (nginx-Config + Reload). Alles andere laeuft als flexii.
 #
-#   sudo ~/services/wahlen/deploy/setup-wahlen.sh
+#   sudo ~/services/sonntagsfrage/deploy/setup-sonntagsfrage.sh
 #
 # Das Skript ist idempotent: bereits erledigte Schritte werden uebersprungen.
 set -euo pipefail
 
 APP_USER="flexii"
-APP_DIR="/home/${APP_USER}/services/wahlen"
+APP_DIR="/home/${APP_USER}/services/sonntagsfrage"
 SITE_CONF="/etc/nginx/sites-available/fherrmann.com"
 SNIPPET="/etc/nginx/snippets/wahlen.conf"
 INCLUDE_LINE="    include ${SNIPPET};"
@@ -22,7 +22,7 @@ fi
 if [[ ! -d "$APP_DIR" ]]; then
   echo "FEHLER: $APP_DIR existiert nicht." >&2
   echo "Erst das Repo dorthin klonen (als ${APP_USER}, nicht als root):" >&2
-  echo "  git clone git@github.com:Flexii2000/wahlen.git $APP_DIR" >&2
+  echo "  git clone git@github.com:Flexii2000/sonntagsfrage.git $APP_DIR" >&2
   exit 1
 fi
 
@@ -113,4 +113,4 @@ systemctl reload nginx
 
 echo
 echo "Fertig. https://fherrmann.com/wahlen sollte jetzt erreichbar sein."
-echo "Fuer kuenftige Updates:  ~/scripts/update-wahlen.sh"
+echo "Fuer kuenftige Updates:  ~/scripts/update-sonntagsfrage.sh"

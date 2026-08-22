@@ -1,5 +1,5 @@
 # Lokal:  docker compose up -d --build
-# Server: /home/flexii/services/wahlen  (NICHT /opt — Snap-Docker verbietet
+# Server: /home/flexii/services/sonntagsfrage  (NICHT /opt — Snap-Docker verbietet
 #         Bind-Mounts dorthin, siehe AGENT-RUNBOOK.md)
 
 services:

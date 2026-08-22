@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Gehoert nach ~/scripts/update-wahlen.sh auf dem Server.
+# Gehoert nach ~/scripts/update-sonntagsfrage.sh auf dem Server.
 # Holt den aktuellen Stand und baut den Container neu. Braucht kein sudo:
 # flexii ist in der docker-Gruppe.
 set -euo pipefail
 
-APP_DIR="/home/flexii/services/wahlen"
+APP_DIR="/home/flexii/services/sonntagsfrage"
 
 echo "[1/4] Wechsel ins wahlen-Repo ..."
 cd "$APP_DIR"

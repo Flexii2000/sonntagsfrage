@@ -24,18 +24,32 @@ Browser
 
 ---
 
-## 2. Wo was liegt
+## 2. Namen — Achtung, zwei davon
+
+| Ebene | Name |
+|---|---|
+| Repo, Verzeichnisse, Skripte | **`sonntagsfrage`** |
+| App, URL, Container, Datenbank | **`wahlen`** |
+
+Also: das Repo `sonntagsfrage` liegt in `~/services/sonntagsfrage`, wird mit
+`~/scripts/update-sonntagsfrage.sh` aktualisiert — und betreibt darin die
+Container `wahlen-app` und `wahlen-db` unter `fherrmann.com/wahlen`.
+Dasselbe Muster wie bei `~/Server-Projects/CSVExporter` ↔ `~/haspa-exporter/`.
+
+---
+
+## 3. Wo was liegt
 
 | Was | Wo |
 |---|---|
-| Repo auf dem Server | `/home/flexii/services/wahlen` |
-| Repo lokal | `~/Server-Projects/wahlen` |
-| GitHub | `git@github.com:Flexii2000/wahlen.git` |
-| Update-Skript | `~/scripts/update-wahlen.sh` |
-| Ersteinrichtung | `<repo>/deploy/setup-wahlen.sh` (braucht sudo) |
+| Repo auf dem Server | `/home/flexii/services/sonntagsfrage` |
+| Repo lokal | `~/Server-Projects/sonntagsfrage` |
+| GitHub | `git@github.com:Flexii2000/sonntagsfrage.git` |
+| Update-Skript | `~/scripts/update-sonntagsfrage.sh` |
+| Ersteinrichtung | `<repo>/deploy/setup-sonntagsfrage.sh` (braucht sudo) |
 | nginx-Snippet | `/etc/nginx/snippets/wahlen.conf`, eingebunden per `include` in `/etc/nginx/sites-available/fherrmann.com` |
 | DB-Passwort | `<repo>/.env` auf dem Server (Modus 600, nicht in Git) |
-| Postgres-Daten | Docker Named Volume `wahlen_wahlen-db-data` |
+| Postgres-Daten | Docker Named Volume `sonntagsfrage_wahlen-db-data` |
 
 > ⚠️ **Nicht unter `/opt` legen.** Der Docker-Daemon auf dem Server ist die
 > Snap-Variante und erlaubt keine Bind-Mounts unterhalb von `/opt`
@@ -45,18 +59,18 @@ Browser
 
 ---
 
-## 3. Alltag
+## 4. Alltag
 
 ```bash
 # Deployen (nach git push)
-~/scripts/update-wahlen.sh
+~/scripts/update-sonntagsfrage.sh
 
 # Status
-cd ~/services/wahlen && docker compose ps
+cd ~/services/sonntagsfrage && docker compose ps
 curl -s localhost:8090/wahlen/actuator/health
 
 # Logs
-cd ~/services/wahlen && docker compose logs --tail=100 -f app
+cd ~/services/sonntagsfrage && docker compose logs --tail=100 -f app
 
 # Datenstand prüfen
 curl -s localhost:8090/wahlen/api/meta | python3 -m json.tool
@@ -67,28 +81,28 @@ schnellste Weg, ohne SSH zu sehen, ob die Daten frisch sind.
 
 ---
 
-## 4. Ersteinrichtung (einmalig)
+## 5. Ersteinrichtung (einmalig)
 
 ```bash
 # 1. auf dem Server, als flexii
 mkdir -p ~/services
-git clone git@github.com:Flexii2000/wahlen.git ~/services/wahlen
+git clone git@github.com:Flexii2000/sonntagsfrage.git ~/services/sonntagsfrage
 
 # 2. nginx + .env + Container, braucht sudo
-sudo ~/services/wahlen/deploy/setup-wahlen.sh
+sudo ~/services/sonntagsfrage/deploy/setup-sonntagsfrage.sh
 
 # 3. Update-Skript an seinen Platz
-cp ~/services/wahlen/deploy/update-wahlen.sh ~/scripts/update-wahlen.sh
-chmod +x ~/scripts/update-wahlen.sh
+cp ~/services/sonntagsfrage/deploy/update-sonntagsfrage.sh ~/scripts/update-sonntagsfrage.sh
+chmod +x ~/scripts/update-sonntagsfrage.sh
 ```
 
-`setup-wahlen.sh` ist idempotent, legt vor der nginx-Änderung ein Backup an
+`setup-sonntagsfrage.sh` ist idempotent, legt vor der nginx-Änderung ein Backup an
 und stellt es bei einem fehlgeschlagenen `nginx -t` selbst wieder her. Es
 lädt nginx erst neu, **nachdem** die App gesund geantwortet hat.
 
 ---
 
-## 5. Wie die Daten reinkommen
+## 6. Wie die Daten reinkommen
 
 Beim Start und danach zweimal pro Stunde (`0 7,37 * * * *`, Europe/Berlin):
 
@@ -106,12 +120,12 @@ sichtbar, statt auszufallen — das ist Absicht.
 Import von Hand erzwingen (Container-Neustart reicht):
 
 ```bash
-cd ~/services/wahlen && docker compose restart app
+cd ~/services/sonntagsfrage && docker compose restart app
 ```
 
 ---
 
-## 6. Wartung, die tatsächlich anfällt
+## 7. Wartung, die tatsächlich anfällt
 
 ### Nach jeder Wahl (der einzige regelmäßige Handgriff)
 
@@ -123,7 +137,7 @@ cd ~/services/wahlen && docker compose restart app
    noch nicht amtlich fest: bestes Schätzdatum plus `dateConfirmed: false` —
    dann taucht er im Kalender auf, kapert aber nicht die Startseite.
 3. `source:` mitpflegen. Zahlen ohne Beleg kommen hier nicht rein.
-4. Committen, pushen, `~/scripts/update-wahlen.sh`.
+4. Committen, pushen, `~/scripts/update-sonntagsfrage.sh`.
 
 ⚠️ **Parteikürzel müssen zur DAWUM-Schreibweise des jeweiligen Parlaments
 passen:** Bundestag und Europaparlament nutzen `CDU/CSU`, Bayern `CSU`, alle
@@ -161,7 +175,7 @@ in `reference/parliaments.yaml` ergänzen.
 
 ---
 
-## 7. Bekannte Fallstricke
+## 8. Bekannte Fallstricke
 
 ### ⚠️ Snap-Docker verbietet `/opt`-Bind-Mounts
 Siehe oben. Wenn Container-DNS oder Port-Forwarding plötzlich kaputt sind
@@ -211,12 +225,12 @@ Konstante: `ParliamentViewService.MIN_COVERAGE`.
 
 ### ⚠️ Kein passwortloses sudo für `flexii`
 Alles, was Root braucht (nginx), läuft ausschließlich über
-`deploy/setup-wahlen.sh` und muss von Felix am Terminal gestartet werden.
-Der Alltag (`update-wahlen.sh`) kommt ohne sudo aus.
+`deploy/setup-sonntagsfrage.sh` und muss von Felix am Terminal gestartet werden.
+Der Alltag (`update-sonntagsfrage.sh`) kommt ohne sudo aus.
 
 ---
 
-## 8. Wenn etwas kaputt ist
+## 9. Wenn etwas kaputt ist
 
 | Symptom | Erster Griff |
 |---|---|
@@ -226,21 +240,21 @@ Der Alltag (`update-wahlen.sh`) kommt ohne sudo aus.
 | `duplicate key ... uq_election_result_final` | Fehlender Flush im ReferenceDataLoader, siehe oben |
 | Wahlergebnis fehlt im Vergleich | Parteikürzel in `elections.yaml` passt nicht zur DAWUM-Schreibweise dieses Parlaments — Log nach "Partei ... unbekannt" durchsuchen |
 | Container startet, DB nicht erreichbar | `docker compose logs db`; bei Netzwerksymptomen den Snap-Daemon neu starten |
-| Alles kaputt, schnell zurück | `git -C ~/services/wahlen checkout <letzter guter Commit> && ~/scripts/update-wahlen.sh` |
+| Alles kaputt, schnell zurück | `git -C ~/services/sonntagsfrage checkout <letzter guter Commit> && ~/scripts/update-sonntagsfrage.sh` |
 
 Datenbank komplett neu aufbauen (verlustfrei — alles kommt aus DAWUM und dem
 Repo, es gibt keine schreibenden Nutzer):
 
 ```bash
-cd ~/services/wahlen
+cd ~/services/sonntagsfrage
 docker compose down
-docker volume rm wahlen_wahlen-db-data
+docker volume rm sonntagsfrage_wahlen-db-data
 docker compose up -d --build     # importiert beim Start alles neu, dauert ~1 min
 ```
 
 ---
 
-## 9. Offen / als Nächstes
+## 10. Offen / als Nächstes
 
 - **Wahlabend-Modus.** Das Datenmodell trägt ihn schon:
   `election_result.kind` kennt `PROGNOSE | HOCHRECHNUNG | VORLAEUFIG |

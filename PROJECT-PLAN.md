@@ -293,12 +293,12 @@ additiv wird:
 ## 9. Betrieb
 
 ```
-Server:  /home/flexii/services/wahlen          ← NICHT /opt (Snap-Docker!)
+Server:  /home/flexii/services/sonntagsfrage          ← NICHT /opt (Snap-Docker!)
 Compose: wahlen-app  (Spring Boot)  → 127.0.0.1:8090
          wahlen-db   (Postgres 18)  → nur intern, kein Port-Mapping
 nginx:   location /wahlen  in /etc/nginx/sites-available/fherrmann.com
-Update:  ~/scripts/update-wahlen.sh   (git pull + compose up -d --build)
-Setup:   deploy/setup-wahlen.sh       (einmalig, braucht sudo)
+Update:  ~/scripts/update-sonntagsfrage.sh   (git pull + compose up -d --build)
+Setup:   deploy/setup-sonntagsfrage.sh       (einmalig, braucht sudo)
 ```
 
 ⚠️ **Der Snap-Docker-Daemon auf dem Server erlaubt keine Bind-Mounts unter
