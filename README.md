@@ -21,7 +21,7 @@ Mode kennt und auf Hover verrät, was an einem bestimmten Tag Sache war.
   sich an die Umfragedichte des jeweiligen Parlaments anpasst
 - **Automatisch wechselnde Startseite**: 21 Tage vor bis 7 Tage nach einer
   Wahl steht diese vorne, sonst der Bundestag
-- **Sitzprojektion** nach Sainte-Laguë inklusive Sperrklausel, als Sitzbogen
+- **Sitzprojektion** nach Sainte-Laguë inklusive Prozenthürde, als Sitzbogen
 - **Koalitionsrechner** — alle rechnerischen Mehrheiten ohne überflüssige
   Partner, wertfrei
 - **Institutsvergleich**: wie stark weicht ein Institut im Schnitt vom

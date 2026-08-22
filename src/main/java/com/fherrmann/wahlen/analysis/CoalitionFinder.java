@@ -72,7 +72,35 @@ public class CoalitionFinder {
                 .comparing(Coalition::minimal).reversed()
                 .thenComparingInt((Coalition c) -> c.partyIds().size())
                 .thenComparing(Comparator.comparingInt(Coalition::seats).reversed()));
-        return result;
+        return disambiguate(result, shortcutsByPartyId);
+    }
+
+    /**
+     * Zwei Buendnisse mit demselben Namen in einer Liste sehen aus wie ein Fehler.
+     *
+     * <p>Passiert, seit SPD und Linke beide als "Rot" gelten: AfD+Gruene+SPD und
+     * AfD+Gruene+Linke ergeben beide "Blau-Gruen-Rot". Die etablierten Namen
+     * (Rot-Rot, Rot-Rot-Gruen) sind es wert; fuer die frei zusammengesetzten
+     * Faelle gilt dann lieber die Parteiliste als ein doppelter Farbname.
+     */
+    private static List<Coalition> disambiguate(List<Coalition> coalitions,
+                                                Map<Integer, String> shortcuts) {
+        Map<String, Long> occurrences = coalitions.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        Coalition::name, java.util.stream.Collectors.counting()));
+
+        List<Coalition> out = new ArrayList<>(coalitions.size());
+        for (Coalition c : coalitions) {
+            if (occurrences.getOrDefault(c.name(), 0L) > 1) {
+                String joined = c.partyIds().stream()
+                        .map(id -> shortcuts.getOrDefault(id, String.valueOf(id)))
+                        .collect(java.util.stream.Collectors.joining(" + "));
+                out.add(new Coalition(c.partyIds(), c.seats(), joined, c.minimal()));
+            } else {
+                out.add(c);
+            }
+        }
+        return out;
     }
 
     /** Namensgebung fuer Koalitionen. */
@@ -105,9 +133,11 @@ public class CoalitionFinder {
                 Map.entry("Grüne", "Grün"),
                 Map.entry("FDP", "Gelb"),
                 Map.entry("AfD", "Blau"),
-                // "Dunkelrot" statt "Rot", sonst hiessen AfD+SPD und AfD+Linke beide
-                // "Blau-Rot". Die etablierten Namen (Rot-Rot-Gruen) stehen oben in KNOWN.
-                Map.entry("Linke", "Dunkelrot"),
+                // Auch die Linke ist "Rot" — Rot-Rot und Rot-Rot-Gruen sind die
+                // gaengigen Bezeichnungen, alles andere klingt konstruiert. Wo
+                // dadurch zwei Buendnisse denselben Farbnamen bekaemen, steht die
+                // Parteiliste unmittelbar daneben und macht es eindeutig.
+                Map.entry("Linke", "Rot"),
                 Map.entry("BSW", "Lila"),
                 Map.entry("Freie Wähler", "Orange"),
                 Map.entry("SSW", "Blau"),

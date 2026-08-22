@@ -357,13 +357,18 @@ Nachgetragen am 2026-08-22, damit dieses Dokument nicht das Falsche behauptet.
 - **Jackson 3 statt Jackson 2.** Spring Boot 4 nutzt `tools.jackson.*`;
   das YAML-Modul musste aus derselben Generation kommen. Siehe die
   Spring-Boot-4-Fallstricke im Runbook.
-- **Parteifarben fallen absichtlich durch die Palettenprüfung.** Gemessen:
-  SPD-Rot gegen Grünen-Grün liegt bei ΔE 3,7 im Deutan-Modell (Zielwert wäre
-  ≥ 8). Semantisch vorgegebene Farben lassen sich nicht wegoptimieren, ohne
-  die Darstellung falsch zu machen. Ausgeglichen wird das durch
-  Sekundärkodierung: Direktbeschriftung am Kurvenende, Legende mit Text,
-  Kürzel im Tooltip, Tabellenansicht, Strichmuster-Schalter. Nur dort, wo
-  Freiheit bestand (BSW gegen Linke im Dark Mode), wurde nachgesteuert.
+- **Parteifarben folgen der Partei, nicht der Palettenprüfung.** Maßgeblich
+  ist die jeweilige CI-Farbe — die Linke also `#BE3075` (dunkelrot/violett),
+  nicht ein kontrastoptimiertes Pink. Dass Rot, Grün und Gelb damit für
+  Rot-Grün-Sehschwächen dicht beieinander liegen (gemessen ΔE 3,7 im
+  Deutan-Modell), ist bewusst hingenommen. Farbe ist ohnehin nicht der
+  einzige Identitätskanal: Direktbeschriftung am Kurvenende, Legende mit
+  Text, Kürzel im Tooltip, Tabellenansicht und ein Strichmuster-Schalter
+  kommen hinzu. Dark-Mode-Werte bleiben so nah wie möglich an der CI und
+  werden nur so weit angehoben, dass die Linie nicht verschwindet.
+- **"Sperrklausel" heißt im UI "5-%-Hürde".** Der juristische Begriff steht
+  nur noch einmal erklärend auf `/wahlen/daten`. Beim Europaparlament, wo es
+  in Deutschland keine gibt, steht "ohne Prozenthürde".
 - **Postgres 18 will das Volume an `/var/lib/postgresql`**, nicht an
   `.../data` — erst beim Deploy auf dem Server aufgefallen.
 - **`eclipse-temurin:25-jre` hat weder `curl` noch `wget`**, der

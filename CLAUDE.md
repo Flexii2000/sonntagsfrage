@@ -19,12 +19,12 @@ Spring Boot 4 + Postgres, ausgeliefert als Docker-Compose-Stack.
   bei jedem Start und schreibt die Datenbank neu.
 - **Jeder Eintrag in `elections.yaml` braucht eine `source`-URL.** Zahlen
   ohne Beleg kommen hier nicht rein.
-- **Die Parteifarben nicht "verbessern".** Sie sind semantisch vorgegeben und
-  fallen deshalb durch die üblichen Palettenprüfungen (Rot/Grün/Gelb sind
-  bei Farbsehschwäche nicht trennbar). Der Ausgleich ist die
-  Sekundärkodierung — Direktbeschriftung, Legende mit Text, Tooltip,
-  Tabellenansicht, Strichmuster-Schalter. Wer an Farben schraubt, muss die
-  mitdenken. Begründung steht in `reference/parties.yaml`.
+- **Die Parteifarben nicht "verbessern".** Maßgeblich ist die Farbe, die sich
+  die Partei selbst gibt (die Linke etwa `#BE3075`), nicht das Ergebnis einer
+  Kontrastoptimierung. Dass Rot, Grün und Gelb dadurch dicht beieinander
+  liegen, ist hingenommen; Farbe ist ohnehin nicht der einzige
+  Identitätskanal (Direktbeschriftung, Legende mit Text, Tooltip,
+  Tabellenansicht, Strichmuster-Schalter). Details in `reference/parties.yaml`.
 - **Der Koalitionsrechner bewertet nicht.** Er zeigt, was arithmetisch geht,
   und filtert nicht danach, wer mit wem koalieren würde.
 - **Die Sitzprojektion ist eine Näherung** und muss im UI auch so

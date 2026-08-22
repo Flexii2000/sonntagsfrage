@@ -48,8 +48,9 @@
       <p class="hint" style="margin-top:0.7rem">
         Linien sind ein Gauß-gewichteter gleitender Durchschnitt (σ = <span id="sigma">10</span> Tage)
         über alle Institute. Jede Umfrage zählt zur Mitte ihres Erhebungszeitraums, nicht zum
-        Veröffentlichungstag. Die dünne waagerechte Linie markiert die
-        <span th:text="${#numbers.formatDecimal(detail.parliament.threshold, 1, 0, 'COMMA')}">5</span>-%-Sperrklausel.
+        Veröffentlichungstag.<th:block th:if="${detail.parliament.threshold > 0}">
+        Die dünne waagerechte Linie markiert die
+        <span th:text="${#numbers.formatDecimal(detail.parliament.threshold, 1, 0, 'COMMA')}">5</span>-%-Hürde.</th:block>
         <a th:href="@{/daten}">Wie das gerechnet wird</a>.
       </p>
         <p class="hint gap-note" hidden>
@@ -101,7 +102,9 @@
         </th:block>
       </p>
       <p class="hint" th:if="${!detail.seats.belowThreshold.isEmpty()}">
-        An der Sperrklausel gescheitert:
+        An der
+        <span th:text="${#numbers.formatDecimal(detail.parliament.threshold, 1, 0, 'COMMA')}">5</span>-%-Hürde
+        gescheitert:
         <th:block th:each="entry,it : ${detail.seats.belowThreshold}">
           <span th:text="${#lists.toList(detail.parties).?[id == __${entry.key}__][0]?.shortcut ?: '?'}">X</span>
           <span th:text="'(' + ${#numbers.formatDecimal(entry.value, 1, 1, 'COMMA')} + ' %)'">(0 %)</span><th:block

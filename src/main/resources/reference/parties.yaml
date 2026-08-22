@@ -1,12 +1,12 @@
 # Parteifarben und Sortierung.
 #
-# WICHTIG — bewusste Abweichung von den ueblichen Palettenregeln:
-# Parteifarben sind semantisch vorgegeben. SPD-Rot, Gruenen-Gruen und FDP-Gelb
-# nebeneinander sind genau das Paar, das Rot-Gruen-Sehschwaechen nicht trennen
-# koennen (geprueft: adjacent ΔE 3.7 im Deutan-Modell, Zielwert waere >= 8).
-# Eine "bessere" Palette waere fuer deutsche Leser schlicht falsch.
+# Massgeblich ist die Farbe, die sich die Partei selbst gibt — nicht das
+# Ergebnis einer Kontrastoptimierung. Eine "bessere" Palette waere fuer
+# deutsche Leser schlicht falsch: SPD ist rot, die Gruenen sind gruen, die
+# Linke ist dunkelrot/violett (#BE3075, ihre CI-Farbe).
 #
-# Konsequenz: Farbe ist hier NICHT der Identitaetskanal. Jede Serie traegt
+# Das heisst zwangslaeufig, dass Rot, Gruen und Gelb dicht beieinander liegen.
+# Farbe ist hier deshalb nicht der einzige Identitaetskanal — jede Serie traegt
 # zusaetzlich immer
 #   - eine Direktbeschriftung mit dem Parteikuerzel am Kurvenende,
 #   - einen Legendeneintrag mit Text,
@@ -15,7 +15,9 @@
 #   - optional (Schalter "Muster") zusaetzliche Strichmuster.
 #
 # Die Dark-Mode-Werte sind eigenstaendig gewaehlt, keine Aufhellung:
-# Schwarz (CDU/CSU) und Gelb (FDP) verschwinden sonst.
+# Schwarz (CDU/CSU) und Gelb (FDP) verschwinden sonst. Sie bleiben so nah wie
+# moeglich an der Original-CI und werden nur so weit angehoben, dass die Linie
+# auf dunklem Grund nicht verschwindet.
 #
 # "spectrum" ordnet die Parteien fuer den Sitzbogen von links nach rechts —
 # die uebliche Sitzordnung deutscher Parlamente. Das ist eine Konvention, keine
@@ -62,8 +64,9 @@ parties:
     order: 50
     spectrum: 90
   - shortcut: "Linke"
-    light: "#C8377E"
-    dark: "#F062A6"
+    # CI-Farbe der Partei selbst — dunkelrot/violett, nicht pink.
+    light: "#BE3075"
+    dark: "#C9418C"
     order: 60
     spectrum: 10
   - shortcut: "BSW"

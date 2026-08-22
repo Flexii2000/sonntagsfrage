@@ -258,7 +258,12 @@ public class ParliamentViewService {
      * Parteiensystem oft veraendert. Gibt es dazu keine Daten, die letzten zwei Jahre.
      */
     private LocalDate defaultFrom(Optional<Election> last, List<PollPoint> points, LocalDate to) {
-        LocalDate fallback = to.minusMonths(FALLBACK_MONTHS);
+        // Der Rueckfallzeitraum haengt an der juengsten Umfrage, nicht an heute.
+        // Sonst ist das Fenster leer, wenn laenger als FALLBACK_MONTHS gar nicht
+        // befragt wurde — beim Europaparlament ist genau das der Fall: die letzte
+        // Umfrage stammt von vor der Europawahl 2024.
+        LocalDate anchor = points.isEmpty() ? to : points.get(0).effectiveDate();
+        LocalDate fallback = (anchor.isBefore(to) ? anchor : to).minusMonths(FALLBACK_MONTHS);
         if (last.isEmpty()) {
             return fallback;
         }
@@ -363,8 +368,16 @@ public class ParliamentViewService {
                 distribution.totalSeats(), distribution.majority(), entries,
                 round(distribution.failed(), 1),
                 parliament.getThresholdPercent().doubleValue(),
-                "Sainte-Laguë auf %d Sitze, Sperrklausel %s %%".formatted(
-                        total, parliament.getThresholdPercent().stripTrailingZeros().toPlainString()));
+                describeBasis(total, parliament.getThresholdPercent()));
+    }
+
+    /** Beim Europaparlament gibt es in Deutschland keine Huerde — das muss dastehen. */
+    private static String describeBasis(int totalSeats, java.math.BigDecimal threshold) {
+        if (threshold == null || threshold.signum() <= 0) {
+            return "Sainte-Laguë auf %d Sitze, ohne Prozenthürde".formatted(totalSeats);
+        }
+        return "Sainte-Laguë auf %d Sitze, %s-%%-Hürde".formatted(
+                totalSeats, threshold.stripTrailingZeros().toPlainString());
     }
 
     private List<Dtos.CoalitionDto> coalitionsDto(Dtos.SeatsDto seats, List<Party> relevant) {

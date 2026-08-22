@@ -61,13 +61,27 @@ class CoalitionFinderTest {
     }
 
     @Test
-    @DisplayName("vergibt fuer SPD und Linke unterscheidbare Farbwoerter")
-    void distinguishesRedFromDarkRed() {
-        List<String> withSpd = names(finder.find(seats(7, 45, 2, 30, 5, 25), 51, SHORTCUTS));
+    @DisplayName("nennt SPD plus Linke schlicht Rot-Rot")
+    void redRed() {
+        assertThat(names(finder.find(seats(2, 30, 5, 25, 1, 45), 51, SHORTCUTS)))
+                .contains("Rot-Rot");
+    }
 
-        // AfD+SPD und AfD+Linke duerfen nicht beide "Blau-Rot" heissen.
-        assertThat(withSpd).contains("Blau-Rot", "Blau-Dunkelrot");
-        assertThat(withSpd).doesNotHaveDuplicates();
+    @Test
+    @DisplayName("nennt SPD, Linke und Gruene Rot-Rot-Gruen")
+    void redRedGreen() {
+        assertThat(names(finder.find(seats(2, 25, 5, 20, 4, 20, 1, 35), 51, SHORTCUTS)))
+                .contains("Rot-Rot-Grün");
+    }
+
+    @Test
+    @DisplayName("vergibt keinen Namen zweimal in derselben Liste")
+    void namesStayUnique() {
+        // AfD+Gruene+SPD und AfD+Gruene+Linke ergaeben beide "Blau-Gruen-Rot".
+        List<String> found = names(finder.find(seats(7, 30, 4, 25, 2, 25, 5, 20), 51, SHORTCUTS));
+
+        assertThat(found).doesNotHaveDuplicates();
+        assertThat(found).anySatisfy(n -> assertThat(n).contains("Linke"));
     }
 
     @Test
