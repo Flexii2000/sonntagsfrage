@@ -387,6 +387,7 @@ a.parliament-card:hover { text-decoration: none; transform: translateY(-2px); bo
 .calendar { list-style: none; margin: 0; padding: 0; }
 .calendar li {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 0.7rem;
   padding: 0.55rem 0;
@@ -395,6 +396,17 @@ a.parliament-card:hover { text-decoration: none; transform: translateY(-2px); bo
 .calendar li + li { border-top: 1px solid var(--grid); }
 .calendar .date { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 6.2rem; font-size: 0.82rem; }
 .calendar .away { margin-left: auto; color: var(--faint); font-size: 0.79rem; white-space: nowrap; }
+
+/* Auf schmalen Viewports passt die Zeile nicht nebeneinander: Datum, Name,
+   Hinweis und Countdown zusammen brauchen rund 610px. Ohne Umbruch schiebt
+   der Kalender die ganze Seite seitlich auf. Deshalb bekommt der Wahlname
+   eine eigene Zeile, Datum/Hinweis/Countdown stehen darunter. */
+@media (max-width: 700px) {
+  .calendar li { gap: 0.3rem 0.6rem; }
+  .calendar li > a { order: -1; flex: 1 1 100%; overflow-wrap: break-word; }
+  .calendar .date { min-width: 0; }
+  .calendar .away { margin-left: 0; }
+}
 
 /* ----------------------------------------------------------------- Fusszeile */
 
