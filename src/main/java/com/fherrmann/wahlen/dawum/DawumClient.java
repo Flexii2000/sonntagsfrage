@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -24,7 +25,7 @@ public class DawumClient {
 
     private final RestClient restClient;
 
-    public DawumClient(RestClient dawumRestClient) {
+    public DawumClient(@Qualifier("dawumRestClient") RestClient dawumRestClient) {
         this.restClient = dawumRestClient;
     }
 

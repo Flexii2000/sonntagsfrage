@@ -15,6 +15,10 @@
 #                  Bayern nutzt "CSU", alle anderen Laender "CDU".
 #   seats          tatsaechliche Groesse des gewaehlten Parlaments
 #   source         Beleg-URL; bei Aktualisierung bitte mitpflegen
+#   live           automatische Wahlabend-Quellen (CSV der Landeswahlleitung);
+#                  Felder siehe ReferenceData.LiveSourceRef und AGENT-RUNBOOK.md,
+#                  Abschnitt "Wahlabend". Prognosen und Hochrechnungen von
+#                  ARD/ZDF kommen nicht hier rein, sondern ueber die API/das Formular.
 #
 # Ergebnisse sind Zweitstimmen- bzw. Landesstimmenanteile.
 
@@ -111,6 +115,10 @@ elections:
     date: 2026-09-20
     status: SCHEDULED
     source: https://www.wahlen-berlin.de/
+    # Wahlabend: Die Landeswahlleitung nennt Format und URL ihrer Ergebnisdaten
+    # erst am Wahlabend. Sobald eine CSV mit Landeszeile bekannt ist, hier ein
+    # "live:"-Block nach dem Muster von Mecklenburg-Vorpommern — bis dahin
+    # Handeingabe ueber /wahlen/berlin/wahlabend/eintragen.
 
   # ------------------------------------------------------------- Brandenburg
   - parliament: brandenburg
@@ -223,7 +231,36 @@ elections:
   - parliament: mecklenburg-vorpommern
     date: 2026-09-20
     status: SCHEDULED
-    source: https://www.laiv-mv.de/Wahlen/Landtagswahlen/
+    source: https://www.laiv-mv.de/Wahlen/Landtagswahlen/2026/
+    # Wahlabend: Der Landeswahlleiter veroeffentlicht ab ca. 19 Uhr alle 15 min
+    # CSV-Dateien (ISO-8859-1, Titelzeilen vor dem Kopf). Landeszeile ist
+    # Wahlkreis 99, "A" = absolute Stimmen, "2" = Zweitstimme. "Erf. Wahlbezirke"
+    # gegen "Wahlbezirke insg." sagt, ob die Auszaehlung durch ist; dann gelten
+    # die Mandate aus l_mandate.csv. Laut Hinweisseite kann sich die endgueltige
+    # URL in KW 38 noch aendern — am Wahltag vor 18 Uhr einmal pruefen:
+    # https://www.laiv-mv.de/Wahlen/Landtagswahlen/2026/Ergebnisse/
+    live:
+      - type: csv
+        label: Landeswahlleiter Mecklenburg-Vorpommern
+        url: https://www.laiv-mv.de/static/LAIV/Wahlen/2-Landtagswahlen/2026/Ergebnisse/l_wahlkreise.csv
+        charset: ISO-8859-1
+        row: { "Wahlkreis": "99", "Ausgabe": "A", "Erst-/Zweitstimme": "2" }
+        validVotes: "Gültige Stimmen"
+        voters: "Wähler"
+        eligible: "Wahlberechtigte"
+        turnout: "Wahlbeteiligung"
+        partiesAfter: "Gültige Stimmen"
+        ignore: ["Einzelbewerber"]
+        districtsTotal: "Wahlbezirke insg."
+        districtsCounted: "Erf. Wahlbezirke"
+        timestamp: "Berechnungsdatum"
+        timestampFormat: "dd.MM.yyyy HH:mm:ss"
+        seats:
+          url: https://www.laiv-mv.de/static/LAIV/Wahlen/2-Landtagswahlen/2026/Ergebnisse/l_mandate.csv
+          charset: ISO-8859-1
+          row: { "Wahlkreis": "99", "Mandatstyp": "Insgesamt" }
+          partiesAfter: "Mandatstyp"
+          ignore: ["Einzelbewerber"]
 
   # ------------------------------------------------------------ Niedersachsen
   - parliament: niedersachsen
@@ -356,7 +393,28 @@ elections:
   - parliament: sachsen-anhalt
     date: 2026-09-06
     status: SCHEDULED
-    source: https://wahlergebnis.sachsen-anhalt.de/
+    source: https://wahlergebnisse.sachsen-anhalt.de/wahlen/lt26/
+    # Wahlabend: CSV der Landeswahlleiterin (UTF-8, Semikolon, eine Spalte je
+    # Partei mit Praefix "F01." usw. = Zweitstimmen; "D.." sind Erststimmen und
+    # bleiben aussen vor). Landeszeile: Satzart LAN mit leerem "Wahllokal"
+    # (Urne+Brief zusammen). Einen Auszaehlungsfortschritt hat die Datei nicht,
+    # deshalb steht der Reifegrad fest: die Auszaehlung ist seit dem 7.9. durch.
+    # Bei der naechsten Wahl "kind" am Wahlabend weglassen (-> Auszaehlungsstand)
+    # und erst mit dem vorlaeufigen Ergebnis wieder setzen.
+    live:
+      - type: csv
+        label: Landeswahlleiterin Sachsen-Anhalt
+        url: https://wahlergebnisse.sachsen-anhalt.de/wahlen/lt26/downloads/Ergebnisse_Land_RKR_WKR_LT_2026.csv
+        row: { "Satzart": "LAN", "Wahllokal": "" }
+        validVotes: "F.Gültige.Zweitstimmen"
+        voters: "B.Wähler"
+        eligible: "A.Wahlberechtigte"
+        partyPattern: "^F\\d+\\.(.+)$"
+        kind: VORLAEUFIG
+        seats:
+          url: https://wahlergebnisse.sachsen-anhalt.de/wahlen/lt26/downloads/Sitzverteilung_LT_2026.csv
+          partyColumn: "Partei"
+          seatsColumn: "Sitze.insgesamt"
 
   # -------------------------------------------------------- Schleswig-Holstein
   - parliament: schleswig-holstein

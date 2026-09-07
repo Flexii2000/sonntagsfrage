@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head(${pageTitle})}"></head>
+<body>
+<header th:replace="~{fragments :: header('')}"></header>
+
+<main class="wrap">
+  <section class="section" style="max-width:720px">
+    <header>
+      <p class="eyebrow">Wahlabend · Eintragen</p>
+      <h1 th:text="${electionName} + ' ' + ${#temporals.format(electionDate, 'd.M.yyyy')}">Wahl</h1>
+      <p class="sub">
+        Prognose oder Hochrechnung von Hand eintragen — für den Fall, dass der automatische
+        Abruf klemmt, und für die Sender-Zahlen, die es nirgends maschinenlesbar gibt.
+        <a th:href="@{/{slug}(slug=${slug})}">Zurück zur Seite</a>.
+      </p>
+    </header>
+
+    <form class="card wahlabend-form" id="report-form" th:attr="data-slug=${slug},data-date=${electionDate}">
+      <div class="form-grid">
+        <label>Art
+          <select name="kind" required>
+            <option value="PROGNOSE">Prognose (18 Uhr)</option>
+            <option value="HOCHRECHNUNG" selected>Hochrechnung</option>
+            <option value="AUSZAEHLUNG">Auszählungsstand</option>
+            <option value="VORLAEUFIG">Vorläufiges Ergebnis</option>
+          </select>
+        </label>
+        <label>Uhrzeit
+          <input name="reportedAt" type="text" inputmode="numeric" placeholder="18:00" pattern="[0-2][0-9]:[0-5][0-9]"
+                 title="HH:mm — ab 18 Uhr zählt der Wahltag, davor der Folgetag">
+        </label>
+        <label>Quelle
+          <input name="source" list="sources" required placeholder="ARD / infratest dimap">
+          <datalist id="sources">
+            <option value="ARD / infratest dimap"></option>
+            <option value="ZDF / Forschungsgruppe Wahlen"></option>
+            <option value="Landeswahlleitung"></option>
+          </datalist>
+        </label>
+        <label>Quelle (Link, optional)
+          <input name="sourceUrl" type="url" placeholder="https://…">
+        </label>
+        <label>Wahlbeteiligung in %, optional
+          <input name="turnout" type="text" inputmode="decimal" placeholder="72,4">
+        </label>
+        <label>Notiz, optional
+          <input name="note" type="text" placeholder="z.B. 2. Hochrechnung">
+        </label>
+      </div>
+
+      <h3 style="margin-top:1.2rem">Parteien</h3>
+      <p class="hint">Kürzel wie in der Datenbank (Tabelle unten). Prozent mit Komma oder Punkt.
+        Sitze nur, wenn die Quelle welche nennt — sonst werden sie projiziert. Fehlt „Sonstige“,
+        ist der Rest bis 100 gemeint.</p>
+      <div class="party-rows" id="party-rows">
+        <div class="party-row head"><span>Partei</span><span>Prozent</span><span>Sitze</span><span></span></div>
+        <div class="party-row" th:each="p : ${parties}">
+          <input name="party" th:value="${p}" list="known-parties">
+          <input name="percent" type="text" inputmode="decimal" placeholder="0,0">
+          <input name="seats" type="text" inputmode="numeric" placeholder="–">
+          <button type="button" class="remove" aria-label="Zeile entfernen">×</button>
+        </div>
+      </div>
+      <datalist id="known-parties">
+        <option th:each="s : ${known}" th:value="${s}"></option>
+      </datalist>
+      <p><button type="button" id="add-row" class="secondary">+ Partei</button></p>
+
+      <div class="form-grid" style="margin-top:1rem">
+        <label>Token
+          <input name="token" type="password" autocomplete="current-password" required>
+        </label>
+      </div>
+
+      <p class="form-actions">
+        <button type="submit" id="submit">Stand eintragen</button>
+        <span class="hint" id="form-status"></span>
+      </p>
+    </form>
+
+    <div class="card" style="margin-top:1rem" th:if="${wa != null and !wa.history.isEmpty()}">
+      <h2>Bereits eingetragen</h2>
+      <p class="hint">Löschen entfernt den Stand endgültig; der Verlauf soll sonst bleiben, wie er war.</p>
+      <ul class="report-list" id="report-list">
+        <li th:each="r : ${wa.history}" th:attr="data-id=${r.id}">
+          <span><b th:text="${r.timeLabel}">18:00</b> · <span th:text="${r.kindLabel}">Art</span> ·
+            <span class="dim" th:text="${r.source}">Quelle</span></span>
+          <button type="button" class="secondary delete" th:attr="data-id=${r.id}">löschen</button>
+        </li>
+      </ul>
+    </div>
+
+    <p class="hint" style="margin-top:1rem">
+      Dasselbe per Skript: <code>deploy/wahlabend.sh</code> im Repo, oder direkt
+      <code>POST /wahlen/api/wahlabend/<span th:text="${slug}">slug</span>/<span th:text="${electionDate}">Datum</span>/reports</code>
+      mit <code>Authorization: Bearer …</code>. Das amtliche Endergebnis gehört nicht hierher,
+      sondern in <code>elections.yaml</code>.
+    </p>
+  </section>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+<script type="application/json" id="bootstrap">{}</script>
+<script type="module" th:src="@{/js/app.js}"></script>
+</body>
+</html>

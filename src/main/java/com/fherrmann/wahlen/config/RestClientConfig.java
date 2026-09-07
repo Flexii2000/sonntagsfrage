@@ -36,4 +36,23 @@ public class RestClientConfig {
                 .requestFactory(factory)
                 .build();
     }
+
+    /**
+     * Client fuer die Landeswahlleitungen am Wahlabend: keine Basis-URL (jede
+     * Quelle bringt ihre eigene mit), derselbe User-Agent, Redirects erlaubt —
+     * einige Landesportale leiten zwischen Hostnamen um.
+     */
+    @Bean
+    RestClient wahlabendRestClient(WahlenProperties properties) {
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .followRedirects(HttpClient.Redirect.ALWAYS)
+                .build();
+        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
+        factory.setReadTimeout(Duration.ofSeconds(20));
+        return RestClient.builder()
+                .defaultHeader("User-Agent", properties.dawum().userAgent())
+                .requestFactory(factory)
+                .build();
+    }
 }

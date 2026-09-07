@@ -100,6 +100,10 @@ public class DawumImportService {
             if (!force && remoteUpdate.isPresent() && remoteUpdate.get().equals(knownUpdate)
                     && surveys.count() > 0) {
                 log.debug("DAWUM unveraendert seit {}", knownUpdate);
+                // Der Abruf hat geklappt — ein frueherer Fehler ist damit erledigt.
+                // Sonst meldet das Statusboard tagelang "Fehler", obwohl jeder
+                // Lauf seither sauber durchging.
+                writeState(ImportState.LAST_ERROR, null);
                 return ImportOutcome.unchanged(knownUpdate);
             }
 
@@ -107,6 +111,7 @@ public class DawumImportService {
             Optional<DawumFetch> fetched = client.fetch(knownEtag);
             if (fetched.isEmpty()) {
                 remoteUpdate.ifPresent(v -> writeState(ImportState.DAWUM_LAST_UPDATE, v));
+                writeState(ImportState.LAST_ERROR, null);
                 return ImportOutcome.unchanged(remoteUpdate.orElse(knownUpdate));
             }
 

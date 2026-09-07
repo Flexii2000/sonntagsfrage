@@ -88,6 +88,13 @@ ENVEOF
   echo "    .env mit generiertem Passwort angelegt."
 fi
 
+# Das Wahlabend-Token kam spaeter dazu — bei einer bestehenden .env nachtragen.
+if ! grep -q '^WAHLABEND_TOKEN=' "${APP_DIR}/.env"; then
+  TOKEN="$(head -c 24 /dev/urandom | base64 | tr -d '/+=' | head -c 32)"
+  printf '\n# Token fuer das Eintragen von Wahlabend-Staenden (siehe AGENT-RUNBOOK.md)\nWAHLABEND_TOKEN=%s\n' "$TOKEN" >> "${APP_DIR}/.env"
+  echo "    WAHLABEND_TOKEN in .env ergaenzt."
+fi
+
 echo "[5/6] Starte die Container (als ${APP_USER}) ..."
 sudo -u "$APP_USER" bash -c "cd '$APP_DIR' && docker compose up -d --build"
 

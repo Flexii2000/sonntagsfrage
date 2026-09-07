@@ -198,6 +198,213 @@ function shift(iso, days) {
   return d.toISOString().slice(0, 10);
 }
 
+/* ---------------------------------------------------------------- Wahlabend */
+
+/* Der Block kommt fertig gerendert vom Server und wird am Wahlabend als Ganzes
+ * ausgetauscht — ein Template fuer Erstaufruf und Nachladen. Hier passiert nur,
+ * was der Server nicht kann: Sitzbogen zeichnen, Farben ans Theme anpassen,
+ * und im richtigen Rhythmus nachfragen. */
+function renderWahlabend(block) {
+  const node = block.querySelector('script.wahlabend-data');
+  if (!node) return;
+  let wa;
+  try {
+    wa = JSON.parse(node.textContent);
+  } catch (e) {
+    return;
+  }
+  const arc = block.querySelector('svg.seat-arc');
+  if (arc && wa && wa.seats && wa.seats.entries && wa.seats.entries.length) {
+    seatArc(arc, wa.seats.entries, wa.parties, wa.seats.majority);
+  }
+}
+
+function wireWahlabend(initial) {
+  let block = initial;
+  renderWahlabend(block);
+  let refresh = Number(block.dataset.refresh || 0);
+  if (!refresh) return;
+
+  const compact = block.dataset.wahlabend === 'compact';
+  let timer = null;
+
+  const stamp = (text) => {
+    const node = block.querySelector('.stamp .checked');
+    if (node) node.textContent = text;
+  };
+
+  const tick = async () => {
+    // Ein verborgener Tab fragt nicht — beim Zurueckkommen sofort.
+    if (document.hidden) { schedule(); return; }
+    try {
+      const url = new URL(`${block.dataset.slug}/wahlabend/fragment`, apiBase());
+      if (compact) url.searchParams.set('compact', 'true');
+      const response = await fetch(url, { cache: 'no-store' });
+      if (response.status === 404) {
+        // Kein Wahlabend mehr (amtliches Ergebnis da): Seite neu laden, damit
+        // der Block an seinen Archivplatz wandert.
+        window.location.reload();
+        return;
+      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const html = await response.text();
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      const fresh = tmp.firstElementChild;
+      if (!fresh) throw new Error('leere Antwort');
+
+      const changed = fresh.dataset.latest !== block.dataset.latest
+        || fresh.dataset.count !== block.dataset.count
+        || fresh.dataset.phase !== block.dataset.phase;
+      if (changed) {
+        block.replaceWith(fresh);
+        block = fresh;
+        applyThemeColors();
+        renderWahlabend(block);
+        refresh = Number(block.dataset.refresh || 0);
+        if (!refresh) return;
+      }
+      stamp(`Zuletzt nachgefragt ${new Date().toLocaleTimeString('de-DE')}.`);
+    } catch (e) {
+      console.warn('[wahlen] Wahlabend konnte nicht nachgeladen werden', e);
+      stamp('Nachladen gerade nicht möglich — der letzte Stand bleibt stehen.');
+    }
+    schedule();
+  };
+
+  const schedule = () => {
+    clearTimeout(timer);
+    timer = setTimeout(tick, refresh * 1000);
+  };
+  schedule();
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) { clearTimeout(timer); tick(); }
+  });
+}
+
+document.querySelectorAll('[data-wahlabend]').forEach(wireWahlabend);
+
+/* ------------------------------------------------------ Wahlabend eintragen */
+
+const reportForm = document.getElementById('report-form');
+if (reportForm) {
+  const TOKEN_KEY = 'wahlen.wahlabend.token';
+  const tokenInput = reportForm.querySelector('input[name="token"]');
+  const status = document.getElementById('form-status');
+  const rows = document.getElementById('party-rows');
+  try {
+    const saved = localStorage.getItem(TOKEN_KEY);
+    if (saved && tokenInput) tokenInput.value = saved;
+  } catch (e) { /* privater Modus o.ae. */ }
+
+  const timeInput = reportForm.querySelector('input[name="reportedAt"]');
+  if (timeInput && !timeInput.value) {
+    timeInput.value = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  const setStatus = (text, ok) => {
+    status.textContent = text;
+    status.className = `hint ${ok ? 'form-status-ok' : 'form-status-error'}`;
+  };
+
+  const addRow = (party = '') => {
+    const row = document.createElement('div');
+    row.className = 'party-row';
+    row.innerHTML =
+      '<input name="party" list="known-parties">' +
+      '<input name="percent" type="text" inputmode="decimal" placeholder="0,0">' +
+      '<input name="seats" type="text" inputmode="numeric" placeholder="–">' +
+      '<button type="button" class="remove" aria-label="Zeile entfernen">×</button>';
+    row.querySelector('input[name="party"]').value = party;
+    rows.appendChild(row);
+  };
+  document.getElementById('add-row')?.addEventListener('click', () => addRow());
+  rows.addEventListener('click', (ev) => {
+    if (ev.target.classList.contains('remove')) ev.target.closest('.party-row').remove();
+  });
+
+  const num = (value) => {
+    const s = String(value ?? '').trim().replace(',', '.');
+    if (!s) return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : NaN;
+  };
+
+  reportForm.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const data = new FormData(reportForm);
+    const results = {};
+    const seats = {};
+    let bad = null;
+    rows.querySelectorAll('.party-row:not(.head)').forEach((row) => {
+      const party = row.querySelector('input[name="party"]').value.trim();
+      const percent = num(row.querySelector('input[name="percent"]').value);
+      const seat = num(row.querySelector('input[name="seats"]').value);
+      if (!party || percent === null) return;
+      if (Number.isNaN(percent) || Number.isNaN(seat)) { bad = party; return; }
+      results[party] = percent;
+      if (seat !== null) seats[party] = Math.round(seat);
+    });
+    if (bad) { setStatus(`Zahl bei ${bad} nicht lesbar.`, false); return; }
+    if (!Object.keys(results).length) { setStatus('Keine Prozentwerte eingetragen.', false); return; }
+
+    const body = {
+      kind: data.get('kind'),
+      reportedAt: data.get('reportedAt') || null,
+      source: data.get('source'),
+      sourceUrl: data.get('sourceUrl') || null,
+      turnout: num(data.get('turnout')),
+      note: data.get('note') || null,
+      results,
+      seats: Object.keys(seats).length ? seats : null,
+    };
+    const token = data.get('token');
+    try { localStorage.setItem(TOKEN_KEY, token); } catch (e) { /* egal */ }
+
+    const button = document.getElementById('submit');
+    button.disabled = true;
+    setStatus('Wird eingetragen …', true);
+    try {
+      const url = new URL(`api/wahlabend/${reportForm.dataset.slug}/${reportForm.dataset.date}/reports`, apiBase());
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Wahlabend-Token': token },
+        body: JSON.stringify(body),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
+      setStatus(`Eingetragen: ${payload.kindLabel} ${payload.timeLabel} Uhr (${payload.source}). Seite neu laden zeigt die Liste.`, true);
+    } catch (e) {
+      setStatus(`Fehler: ${e.message}`, false);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  document.getElementById('report-list')?.addEventListener('click', async (ev) => {
+    const button = ev.target.closest('button.delete');
+    if (!button) return;
+    const id = button.dataset.id;
+    button.disabled = true;
+    try {
+      const url = new URL(`api/wahlabend/reports/${id}`, apiBase());
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: { 'X-Wahlabend-Token': tokenInput ? tokenInput.value : '' },
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || `HTTP ${response.status}`);
+      }
+      button.closest('li').remove();
+      setStatus(`Stand ${id} gelöscht.`, true);
+    } catch (e) {
+      button.disabled = false;
+      setStatus(`Löschen fehlgeschlagen: ${e.message}`, false);
+    }
+  });
+}
+
 /* --------------------------------------------------- Umfragen-Vollansicht */
 
 const instituteFilter = document.getElementById('institute-filter');

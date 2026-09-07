@@ -7,6 +7,7 @@ import com.fherrmann.wahlen.dawum.DawumImportService;
 import com.fherrmann.wahlen.domain.ImportState;
 import com.fherrmann.wahlen.repository.SurveyRepository;
 import com.fherrmann.wahlen.service.ParliamentViewService;
+import com.fherrmann.wahlen.wahlabend.ElectionReportService;
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.Duration;
 import java.time.Instant;
@@ -43,17 +44,20 @@ public class PageController {
     private final SurveyRepository surveys;
     private final WahlenProperties properties;
     private final ObjectMapper objectMapper;
+    private final ElectionReportService reports;
 
     public PageController(ParliamentViewService view,
                           DawumImportService importService,
                           SurveyRepository surveys,
                           WahlenProperties properties,
-                          ObjectMapper objectMapper) {
+                          ObjectMapper objectMapper,
+                          ElectionReportService reports) {
         this.view = view;
         this.importService = importService;
         this.surveys = surveys;
         this.properties = properties;
         this.objectMapper = objectMapper;
+        this.reports = reports;
     }
 
     @GetMapping("/")
@@ -67,6 +71,7 @@ public class PageController {
         model.addAttribute("featured", featured);
         model.addAttribute("hero", hero);
         model.addAttribute("overview", overview);
+        model.addAttribute("waJson", hero != null && hero.wahlabend() != null ? json(hero.wahlabend()) : "null");
         model.addAttribute("bootstrap", json(Map.of(
                 "featured", featured,
                 "hero", hero,
@@ -86,9 +91,55 @@ public class PageController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Unbekanntes Parlament"));
 
         model.addAttribute("detail", detail);
+        model.addAttribute("waJson", detail.wahlabend() != null ? json(detail.wahlabend()) : "null");
         model.addAttribute("bootstrap", json(Map.of("detail", detail)));
         model.addAttribute("pageTitle", detail.parliament().name() + " — Sonntagsfrage");
         return "parliament";
+    }
+
+    /**
+     * Nur der Wahlabend-Block, fertig gerendert — das Skript tauscht ihn am
+     * Wahlabend im Minutentakt aus. Ein Template fuer Erstaufruf und Nachladen,
+     * statt die Darstellung im Browser ein zweites Mal zu bauen.
+     */
+    @GetMapping("/{slug}/wahlabend/fragment")
+    public String wahlabendFragment(@PathVariable String slug,
+                                    @RequestParam(defaultValue = "false") boolean compact,
+                                    Model model, HttpServletResponse response) {
+        Dtos.WahlabendDto wa = view.wahlabend(slug)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Kein Wahlabend"));
+        response.setHeader("Cache-Control", "no-store");
+        model.addAttribute("wa", wa);
+        model.addAttribute("slug", slug);
+        model.addAttribute("waJson", json(wa));
+        return compact ? "wahlabend :: compact" : "wahlabend :: block";
+    }
+
+    /** Formular fuer die Handeingabe von Prognosen und Hochrechnungen. */
+    @GetMapping("/{slug}/wahlabend/eintragen")
+    public String wahlabendForm(@PathVariable String slug, Model model) {
+        Dtos.ParliamentDetailDto detail = view.detail(slug, null, null)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Unbekanntes Parlament"));
+        Dtos.ElectionDto election = detail.lastElection();
+        if (election == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Keine Wahl für dieses Parlament");
+        }
+        Dtos.WahlabendDto wa = detail.wahlabend();
+
+        // Vorbelegung: die Parteien des juengsten Stands, sonst die der Umfragen.
+        List<String> parties = wa != null && wa.latest() != null
+                ? wa.parties().stream().filter(p -> wa.latest().results().containsKey(p.id()))
+                        .map(Dtos.PartyDto::shortcut).toList()
+                : detail.parties().stream().map(Dtos.PartyDto::shortcut).toList();
+
+        model.addAttribute("slug", slug);
+        model.addAttribute("electionName", detail.parliament().electionName());
+        model.addAttribute("electionDate", election.date());
+        model.addAttribute("parties", parties);
+        model.addAttribute("known", reports.knownShortcuts());
+        model.addAttribute("wa", wa);
+        model.addAttribute("pageTitle", "Wahlabend eintragen — " + detail.parliament().name());
+        return "wahlabend-form";
     }
 
     @GetMapping("/{slug}/umfragen")

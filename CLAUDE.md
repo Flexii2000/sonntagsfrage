@@ -19,6 +19,12 @@ Spring Boot 4 + Postgres, ausgeliefert als Docker-Compose-Stack.
   bei jedem Start und schreibt die Datenbank neu.
 - **Jeder Eintrag in `elections.yaml` braucht eine `source`-URL.** Zahlen
   ohne Beleg kommen hier nicht rein.
+- **Wahlabend-Stände (Prognose, Hochrechnung, Auszählung, vorläufig) gehen
+  über die API oder das Formular, nie in die YAML; das amtliche Endergebnis
+  geht in die YAML, nie über die API.** Die YAML ist die Wahrheit für das,
+  was feststeht; die Datenbank für das, was am Abend passiert ist. Ein Stand
+  wird nie verändert, nur angelegt oder gelöscht. Details:
+  `AGENT-RUNBOOK.md`, Abschnitt 9.
 - **Die Parteifarben nicht "verbessern".** Maßgeblich ist die Farbe, die sich
   die Partei selbst gibt (die Linke etwa `#BE3075`), nicht das Ergebnis einer
   Kontrastoptimierung. Dass Rot, Grün und Gelb dadurch dicht beieinander

@@ -1,13 +1,12 @@
 package com.fherrmann.wahlen.service;
 
-import com.fherrmann.wahlen.analysis.CoalitionFinder;
 import com.fherrmann.wahlen.analysis.HouseEffectCalculator;
 import com.fherrmann.wahlen.analysis.PollPoint;
-import com.fherrmann.wahlen.analysis.SeatCalculator;
 import com.fherrmann.wahlen.analysis.TrendCalculator;
 import com.fherrmann.wahlen.api.Dtos;
 import com.fherrmann.wahlen.config.WahlenProperties;
 import com.fherrmann.wahlen.domain.Election;
+import com.fherrmann.wahlen.domain.ElectionReport;
 import com.fherrmann.wahlen.domain.ElectionResult;
 import com.fherrmann.wahlen.domain.Parliament;
 import com.fherrmann.wahlen.domain.Party;
@@ -18,6 +17,7 @@ import com.fherrmann.wahlen.repository.ParliamentRepository;
 import com.fherrmann.wahlen.repository.PartyRepository;
 import com.fherrmann.wahlen.repository.SurveyRepository;
 import com.fherrmann.wahlen.repository.TaskerRepository;
+import com.fherrmann.wahlen.wahlabend.WahlabendService;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -37,7 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ParliamentViewService {
 
     /** Die Sammelposition "Sonstige" ist keine Partei — nie in Sitze/Koalitionen. */
-    private static final int PARTY_SONSTIGE = 0;
+    private static final int PARTY_SONSTIGE = SeatsDtoFactory.PARTY_SONSTIGE;
     /** Ohne vorherige Wahl im Datenbestand: so weit zurueckblicken. */
     private static final int FALLBACK_MONTHS = 24;
     /** Institutseffekte ueber diesen Zeitraum. */
@@ -72,9 +72,9 @@ public class ParliamentViewService {
     private final PollDataService pollData;
     private final ElectionCalendarService calendar;
     private final TrendCalculator trendCalculator;
-    private final SeatCalculator seatCalculator;
-    private final CoalitionFinder coalitionFinder;
+    private final SeatsDtoFactory seatsFactory;
     private final HouseEffectCalculator houseEffects;
+    private final WahlabendService wahlabend;
     private final WahlenProperties properties;
 
     public ParliamentViewService(ParliamentRepository parliaments,
@@ -86,9 +86,9 @@ public class ParliamentViewService {
                                  PollDataService pollData,
                                  ElectionCalendarService calendar,
                                  TrendCalculator trendCalculator,
-                                 SeatCalculator seatCalculator,
-                                 CoalitionFinder coalitionFinder,
+                                 SeatsDtoFactory seatsFactory,
                                  HouseEffectCalculator houseEffects,
+                                 WahlabendService wahlabend,
                                  WahlenProperties properties) {
         this.parliaments = parliaments;
         this.parties = parties;
@@ -99,9 +99,9 @@ public class ParliamentViewService {
         this.pollData = pollData;
         this.calendar = calendar;
         this.trendCalculator = trendCalculator;
-        this.seatCalculator = seatCalculator;
-        this.coalitionFinder = coalitionFinder;
+        this.seatsFactory = seatsFactory;
         this.houseEffects = houseEffects;
+        this.wahlabend = wahlabend;
         this.properties = properties;
     }
 
@@ -128,6 +128,7 @@ public class ParliamentViewService {
         LocalDate today = calendar.today();
         Election election = featured.election();
         String headline = switch (featured.reason()) {
+            case ELECTION_NIGHT -> "Wahlabend: " + parliament.getElectionName();
             case UPCOMING_ELECTION -> {
                 long days = ChronoUnit.DAYS.between(today, election.getElectionDate());
                 yield days == 0
@@ -144,6 +145,13 @@ public class ParliamentViewService {
                 featured.reason().name(),
                 headline,
                 election != null ? electionDto(election, today) : null);
+    }
+
+    /** Nur der Wahlabend-Block — fuer das Nachladen im Browser. */
+    @Transactional(readOnly = true)
+    public Optional<Dtos.WahlabendDto> wahlabend(String slug) {
+        return parliaments.findBySlug(slug).flatMap(p ->
+                wahlabend.forParliament(p, calendar.all(), pollData.pointsFor(p.getId())));
     }
 
     @Transactional(readOnly = true)
@@ -179,7 +187,8 @@ public class ParliamentViewService {
                         currentSigma(points, latest != null ? latest : today)),
                 trendDto(trend),
                 last.map(e -> electionDto(e, today)).orElse(null),
-                next.map(e -> electionDto(e, today)).orElse(null));
+                next.map(e -> electionDto(e, today)).orElse(null),
+                wahlabend.summary(parliament, allElections).orElse(null));
     }
 
     private Dtos.ParliamentDetailDto buildDetail(Parliament parliament, LocalDate requestedFrom,
@@ -218,8 +227,10 @@ public class ParliamentViewService {
         // "Stand 7. August" ehrlicher als eine Hochrechnung auf den heutigen Tag.
         LocalDate currentAsOf = latest != null && latest.isBefore(to) ? latest : to;
         Dtos.CurrentDto current = currentDto(points, relevant, currentAsOf, currentSigma(points, currentAsOf));
-        Dtos.SeatsDto seats = seatsDto(parliament, current, relevant);
-        List<Dtos.CoalitionDto> coalitions = coalitionsDto(seats, relevant);
+        Dtos.SeatsDto seats = seatsFactory.projected(parliament, current.value(), "");
+        Map<Integer, String> shortcuts = new HashMap<>();
+        relevant.forEach(p -> shortcuts.put(p.getId(), p.getShortcut()));
+        List<Dtos.CoalitionDto> coalitions = seatsFactory.coalitions(seats, shortcuts);
 
         Map<Integer, String> instituteNames = instituteNames();
         List<Dtos.HouseEffectDto> effects = houseEffects
@@ -249,7 +260,8 @@ public class ParliamentViewService {
                 next.map(e -> electionDto(e, today)).orElse(null),
                 seats,
                 coalitions,
-                effects);
+                effects,
+                wahlabend.forParliament(parliament, allElections, points).orElse(null));
     }
 
     /**
@@ -284,8 +296,7 @@ public class ParliamentViewService {
     }
 
     private Dtos.PartyDto partyDto(Party p) {
-        return new Dtos.PartyDto(p.getId(), p.getShortcut(), p.getName(),
-                p.getColorLight(), p.getColorDark(), p.getSortOrder(), p.getSpectrum());
+        return Dtos.PartyDto.from(p);
     }
 
     /**
@@ -346,62 +357,27 @@ public class ParliamentViewService {
         return new Dtos.CurrentDto(value, change, asOf);
     }
 
-    private Dtos.SeatsDto seatsDto(Parliament parliament, Dtos.CurrentDto current, List<Party> relevant) {
-        Integer total = parliament.getSeatsTotal();
-        if (total == null || total <= 0 || current.value().isEmpty()) {
-            return null;
-        }
-        SeatCalculator.SeatDistribution distribution = seatCalculator.distribute(
-                current.value(),
-                parliament.getThresholdPercent().doubleValue(),
-                parliament.thresholdExemptPartyIds(),
-                Set.of(PARTY_SONSTIGE),
-                total);
-
-        List<Dtos.SeatEntryDto> entries = distribution.inParliament().stream()
-                .map(id -> new Dtos.SeatEntryDto(id,
-                        distribution.seats().getOrDefault(id, 0),
-                        current.value().getOrDefault(id, 0.0)))
-                .toList();
-
-        return new Dtos.SeatsDto(
-                distribution.totalSeats(), distribution.majority(), entries,
-                round(distribution.failed(), 1),
-                parliament.getThresholdPercent().doubleValue(),
-                describeBasis(total, parliament.getThresholdPercent()));
-    }
-
-    /** Beim Europaparlament gibt es in Deutschland keine Huerde — das muss dastehen. */
-    private static String describeBasis(int totalSeats, java.math.BigDecimal threshold) {
-        if (threshold == null || threshold.signum() <= 0) {
-            return "Sainte-Laguë auf %d Sitze, ohne Prozenthürde".formatted(totalSeats);
-        }
-        return "Sainte-Laguë auf %d Sitze, %s-%%-Hürde".formatted(
-                totalSeats, threshold.stripTrailingZeros().toPlainString());
-    }
-
-    private List<Dtos.CoalitionDto> coalitionsDto(Dtos.SeatsDto seats, List<Party> relevant) {
-        if (seats == null) {
-            return List.of();
-        }
-        Map<Integer, Integer> seatsByParty = new LinkedHashMap<>();
-        seats.entries().forEach(e -> seatsByParty.put(e.partyId(), e.seats()));
-        Map<Integer, String> shortcuts = new HashMap<>();
-        relevant.forEach(p -> shortcuts.put(p.getId(), p.getShortcut()));
-
-        return coalitionFinder.find(seatsByParty, seats.majority(), shortcuts).stream()
-                .filter(CoalitionFinder.Coalition::minimal)
-                .map(c -> new Dtos.CoalitionDto(c.partyIds(), c.seats(), c.name(), c.minimal(),
-                        c.seats() - seats.majority()))
-                .toList();
-    }
-
+    /**
+     * Solange das amtliche Endergebnis fehlt, vertritt der juengste Wahlabend-Stand
+     * es — als Referenzstrich in den Balken ist ein vorlaeufiges Ergebnis besser
+     * als gar keins. {@code resultKind} sagt dem Leser, was er sieht.
+     */
     private Dtos.ElectionDto electionDto(Election election, LocalDate today) {
         Map<Integer, Double> results = new LinkedHashMap<>();
+        String resultKind = null;
         election.getResults().stream()
                 .filter(r -> r.getKind() == ResultKind.AMTLICH)
                 .sorted(Comparator.comparing(ElectionResult::getPercent).reversed())
                 .forEach(r -> results.put(r.getParty().getId(), r.getPercent().doubleValue()));
+        if (!results.isEmpty()) {
+            resultKind = ResultKind.AMTLICH.name();
+        } else if (!election.getElectionDate().isAfter(today)) {
+            Optional<ElectionReport> latest = wahlabend.latestReport(election);
+            if (latest.isPresent()) {
+                results.putAll(WahlabendService.results(latest.get()));
+                resultKind = latest.get().getKind().name();
+            }
+        }
 
         return new Dtos.ElectionDto(
                 election.getElectionDate(),
@@ -411,6 +387,7 @@ public class ParliamentViewService {
                 election.getSeatsTotal(),
                 election.getSourceUrl(),
                 results,
+                resultKind,
                 ChronoUnit.DAYS.between(today, election.getElectionDate()));
     }
 

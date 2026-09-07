@@ -9,7 +9,8 @@ public record WahlenProperties(
         @DefaultValue Dawum dawum,
         @DefaultValue Trend trend,
         @DefaultValue Featured featured,
-        @DefaultValue Cors cors) {
+        @DefaultValue Cors cors,
+        @DefaultValue Wahlabend wahlabend) {
 
     public record Dawum(
             @DefaultValue("https://api.dawum.de") String baseUrl,
@@ -29,6 +30,24 @@ public record WahlenProperties(
     public record Cors(
             /** Herkuenfte, die die JSON-API im Browser lesen duerfen. */
             @DefaultValue("https://status.fherrmann.com") java.util.List<String> allowedOrigins) {
+    }
+
+    public record Wahlabend(
+            /**
+             * Geheimnis fuer das Eintragen von Wahlabend-Staenden (Prognose,
+             * Hochrechnung) ueber die API und das Formular. Leer = Eingabe gesperrt.
+             */
+            @DefaultValue("") String token,
+            /** Abrufrhythmus automatischer Quellen am Wahlabend selbst (Sekunden). */
+            @DefaultValue("60") int hotIntervalSeconds,
+            /** Abrufrhythmus in den Tagen danach, bis das amtliche Ergebnis da ist. */
+            @DefaultValue("900") int coolIntervalSeconds,
+            /** Wie oft der Browser am Wahlabend nachfragt (Sekunden). */
+            @DefaultValue("60") int clientRefreshSeconds,
+            /** Wie oft der Browser in den Tagen danach nachfragt. */
+            @DefaultValue("600") int clientCoolRefreshSeconds,
+            /** So lange nach Schliessung der Wahllokale gilt der Abend als "heiss" (Stunden). */
+            @DefaultValue("36") int hotHours) {
     }
 
     public record Featured(

@@ -26,6 +26,10 @@ Mode kennt und auf Hover verrät, was an einem bestimmten Tag Sache war.
   Partner, wertfrei
 - **Institutsvergleich**: wie stark weicht ein Institut im Schnitt vom
   Konsens aller anderen ab (Leave-one-out gerechnet)
+- **Wahlabend-Modus**: ab 18 Uhr am Wahltag Prognose, Hochrechnungen und der
+  Stand der Landeswahlleitung im Minutentakt, mit Sitzen, Mehrheiten und dem
+  Vergleich zu Vorwahl und Umfragen — bis das amtliche Ergebnis da ist, und
+  danach als Archiv des Abends
 - **Offene JSON-API** unter `/wahlen/api/`
 
 ## Datenquelle

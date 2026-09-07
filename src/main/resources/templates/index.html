@@ -33,9 +33,14 @@
         </p>
       </div>
 
-      <div class="card">
+      <!-- Am Wahlabend zeigt die rechte Karte den Stand des Abends statt der Umfragen. -->
+      <th:block th:if="${hero.wahlabend != null and hero.wahlabend.live}">
+        <div th:replace="~{wahlabend :: compact(${hero.wahlabend}, ${hero.parliament.slug}, ${waJson})}"></div>
+      </th:block>
+
+      <div class="card" th:unless="${hero.wahlabend != null and hero.wahlabend.live}">
         <h2>Aktueller Stand</h2>
-        <p class="hint" th:if="${hero.lastElection != null}">
+        <p class="hint" th:if="${hero.lastElection != null and !hero.lastElection.results.isEmpty()}">
           Der schmale Strich markiert das Ergebnis der letzten Wahl
           (<span th:text="${#temporals.format(hero.lastElection.date, 'd.M.yyyy')}">Datum</span>).
         </p>
@@ -96,9 +101,11 @@
          th:attr="data-slug=${p.parliament.slug}">
         <span class="top">
           <h3 th:text="${p.parliament.shortcut}">Parlament</h3>
-          <span class="when" th:if="${p.nextElection != null and p.nextElection.daysAway <= 60}"
-                th:text="'Wahl in ' + ${p.nextElection.daysAway} + ' Tagen'">bald</span>
-          <span class="when" th:unless="${p.nextElection != null and p.nextElection.daysAway <= 60}"
+          <span class="when badge live" th:if="${p.wahlabend != null and p.wahlabend.live}"
+                th:text="${p.wahlabend.kindLabel != null ? p.wahlabend.kindLabel + ' ' + p.wahlabend.timeLabel : 'Wahlabend'}">Wahlabend</span>
+          <span class="when" th:if="${!(p.wahlabend != null and p.wahlabend.live) and p.nextElection != null and p.nextElection.daysAway <= 60}"
+                th:text="${p.nextElection.daysAway == 0 ? 'Wahl heute' : 'Wahl in ' + p.nextElection.daysAway + ' Tagen'}">bald</span>
+          <span class="when" th:if="${!(p.wahlabend != null and p.wahlabend.live) and !(p.nextElection != null and p.nextElection.daysAway <= 60)}"
                 th:text="${p.parliament.latestSurvey != null
                           ? #temporals.format(p.parliament.latestSurvey, 'MMM yyyy') : 'keine Daten'}">Stand</span>
         </span>

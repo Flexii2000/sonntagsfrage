@@ -71,6 +71,15 @@ wahlen:
   featured:
     pre-election-days: 21
     post-election-days: 7
+  wahlabend:
+    # Ohne Token ist das Eintragen von Prognosen/Hochrechnungen gesperrt; der
+    # Wert steht auf dem Server in der .env (WAHLABEND_TOKEN).
+    token: ${WAHLABEND_TOKEN:}
+    hot-interval-seconds: 60
+    cool-interval-seconds: 900
+    client-refresh-seconds: 60
+    client-cool-refresh-seconds: 600
+    hot-hours: 36
   cors:
     # Das Statusboard liegt auf einer anderen Subdomain und liest /api/meta
     # direkt im Browser — dafuer braucht es eine ausdrueckliche Freigabe.

@@ -3,9 +3,12 @@ package com.fherrmann.wahlen.service;
 import com.fherrmann.wahlen.config.WahlenProperties;
 import com.fherrmann.wahlen.domain.Election;
 import com.fherrmann.wahlen.domain.ElectionStatus;
+import com.fherrmann.wahlen.domain.ResultKind;
 import com.fherrmann.wahlen.repository.ElectionRepository;
+import com.fherrmann.wahlen.wahlabend.WahlabendClock;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
@@ -36,6 +39,8 @@ public class ElectionCalendarService {
      * ausgegeben, damit die Auswahl nicht willkuerlich wirkt.
      */
     public enum FeatureReason {
+        /** Wahlabend laeuft: Wahllokale zu, das amtliche Ergebnis fehlt noch. */
+        ELECTION_NIGHT,
         /** Wahl steht unmittelbar bevor. */
         UPCOMING_ELECTION,
         /** Wahl war gerade. */
@@ -49,6 +54,29 @@ public class ElectionCalendarService {
 
     public LocalDate today() {
         return LocalDate.now(clock);
+    }
+
+    public ZonedDateTime now() {
+        return ZonedDateTime.now(clock);
+    }
+
+    /** Liegt fuer diese Wahl ein amtliches Endergebnis vor? */
+    public static boolean hasOfficialResult(Election election) {
+        return election.getResults().stream().anyMatch(r -> r.getKind() == ResultKind.AMTLICH);
+    }
+
+    /**
+     * Die Wahl, deren Wahlabend gerade "heiss" ist: Wahllokale seit 18 Uhr zu,
+     * hoechstens {@code hotHours} her, amtliches Ergebnis noch offen. Bei zwei
+     * Wahlen am selben Tag das groessere Parlament.
+     */
+    public Optional<Election> electionNight(List<Election> all) {
+        ZonedDateTime now = now();
+        return all.stream()
+                .filter(Election::isDateConfirmed)
+                .filter(e -> WahlabendClock.isHot(e.getElectionDate(), now, properties.wahlabend().hotHours()))
+                .filter(e -> !hasOfficialResult(e))
+                .max(Comparator.comparing(this::parliamentSize));
     }
 
     @Transactional(readOnly = true)
@@ -78,6 +106,7 @@ public class ElectionCalendarService {
      * Welches Parlament gehoert auf die Startseite?
      *
      * <ol>
+     *   <li>Wahlabend laeuft (18 Uhr am Wahltag bis {@code hotHours} spaeter)</li>
      *   <li>Wahl innerhalb der naechsten {@code preElectionDays} Tage — die naechstliegende</li>
      *   <li>Wahl innerhalb der letzten {@code postElectionDays} Tage — die juengste</li>
      *   <li>sonst: Bundestag</li>
@@ -95,6 +124,12 @@ public class ElectionCalendarService {
     public Featured featured() {
         List<Election> all = all();
         LocalDate today = today();
+
+        Optional<Election> night = electionNight(all);
+        if (night.isPresent()) {
+            return new Featured(night.get().getParliament().getId(),
+                    FeatureReason.ELECTION_NIGHT, night.get());
+        }
 
         Optional<Election> upcoming = all.stream()
                 .filter(Election::isDateConfirmed)

@@ -6,6 +6,11 @@
 
 <main class="wrap">
 
+  <!-- Waehrend des Wahlabends steht er ganz oben; danach bleibt er unten, unter den Umfragen. -->
+  <th:block th:if="${detail.wahlabend != null and detail.wahlabend.phase != 'ABGESCHLOSSEN'}">
+    <div th:replace="~{wahlabend :: block(${detail.wahlabend}, ${detail.parliament.slug}, ${waJson})}"></div>
+  </th:block>
+
   <section class="section">
     <header>
       <p class="eyebrow">Sonntagsfrage</p>
@@ -72,8 +77,9 @@
           <span th:text="${T(java.time.temporal.ChronoUnit).DAYS.between(detail.parliament.latestSurvey, T(java.time.LocalDate).now())}">0</span>
           Tagen wurde hier nicht mehr befragt</th:block>.
       </p>
-      <p class="sub" th:if="${detail.lastElection != null}">
-        Strich im Balken: Ergebnis der Wahl vom
+      <p class="sub" th:if="${detail.lastElection != null and !detail.lastElection.results.isEmpty()}">
+        Strich im Balken: <th:block th:if="${detail.lastElection.resultKind == 'AMTLICH'}">Ergebnis</th:block><th:block
+          th:unless="${detail.lastElection.resultKind == 'AMTLICH'}">vorläufiger Stand</th:block> der Wahl vom
         <span th:text="${#temporals.format(detail.lastElection.date, 'd. MMMM yyyy')}">Datum</span><th:block
           th:if="${detail.lastElection.turnout != null}">, Wahlbeteiligung
         <span th:text="${#numbers.formatDecimal(detail.lastElection.turnout, 1, 1, 'COMMA')} + ' %'">0 %</span></th:block>.
@@ -117,6 +123,11 @@
       </p>
     </div>
   </section>
+
+  <!-- ============================================== Wahlabend (Archiv) ==== -->
+  <th:block th:if="${detail.wahlabend != null and detail.wahlabend.phase == 'ABGESCHLOSSEN'}">
+    <div th:replace="~{wahlabend :: block(${detail.wahlabend}, ${detail.parliament.slug}, ${waJson})}"></div>
+  </th:block>
 
   <!-- ============================================== Koalitionen =========== -->
   <section class="section" th:if="${!detail.coalitions.isEmpty()}">

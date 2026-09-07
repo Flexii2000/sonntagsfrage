@@ -3,7 +3,7 @@
 > Betriebshandbuch für Agenten und für Felix in sechs Monaten.
 > Ergänzt `~/Server-Projects/SERVER-CONTEXT.md`, dupliziert es nicht.
 >
-> Stand: 2026-08-22
+> Stand: 2026-09-07
 
 ---
 
@@ -19,7 +19,8 @@ Browser
        └─ Container wahlen-app    (Spring Boot 4, Java 25)
             └─ Container wahlen-db (Postgres 18, Named Volume)
                  ▲
-                 └── alle 30 min:  api.dawum.de
+                 ├── alle 30 min:  api.dawum.de
+                 └── am Wahlabend jede Minute:  CSV der Landeswahlleitung
 ```
 
 ---
@@ -162,6 +163,9 @@ cd ~/services/sonntagsfrage && docker compose restart app
 3. `source:` mitpflegen. Zahlen ohne Beleg kommen hier nicht rein.
 4. Committen, pushen, `~/scripts/update-sonntagsfrage.sh`.
 
+Damit endet auch der Wahlabend-Modus der Wahl (Abschnitt 9): der Block wandert
+unter die Umfragen und bleibt dort als Archiv des Abends.
+
 ⚠️ **Parteikürzel müssen zur DAWUM-Schreibweise des jeweiligen Parlaments
 passen:** Bundestag und Europaparlament nutzen `CDU/CSU`, Bayern `CSU`, alle
 übrigen Länder `CDU`. Passt es nicht, wird die Zeile mit einer Warnung im Log
@@ -198,7 +202,129 @@ in `reference/parliaments.yaml` ergänzen.
 
 ---
 
-## 9. Bekannte Fallstricke
+## 9. Wahlabend
+
+Ab 18 Uhr am Wahltag steht auf `/wahlen/<slug>` ganz oben der
+**Wahlabend-Block**: 18-Uhr-Prognose, Hochrechnungen, Auszählungsstand und
+vorläufiges Ergebnis; Sitze und rechnerische Mehrheiten daraus; Vergleich mit
+der Vorwahl und mit dem geglätteten Umfragestand zum Wahltag; der Verlauf des
+Abends als Tabelle. Der Block lädt sich im Browser **jede Minute** nach
+(als fertiges HTML-Fragment, `/wahlen/<slug>/wahlabend/fragment`) und bleibt
+oben, **bis das amtliche Endergebnis in `elections.yaml` steht**. Danach
+wandert er unter die Umfragen und bleibt dort dauerhaft nachlesbar.
+
+Die Startseite featured am Abend und am Folgetag die Wahl (`ELECTION_NIGHT`),
+die Hero-Karte rechts zeigt dann den aktuellen Stand statt der Umfragen.
+
+### Woher die Stände kommen
+
+| Was | Weg | Wer |
+|---|---|---|
+| Zwischenstand, vorläufiges Ergebnis, Sitze der **Landeswahlleitung** | automatisch: `WahlabendPoller` liest die CSV, die in `elections.yaml` unter `live:` steht — in den ersten 36 h nach 18 Uhr jede Minute, danach alle 15 min, immer mit ETag/If-Modified-Since. Unveränderte Datei = kein neuer Stand (Fingerabdruck) | Code |
+| **18-Uhr-Prognose und Hochrechnungen** von ARD (infratest dimap) und ZDF (Forschungsgruppe Wahlen) | von Hand: Formular **`/wahlen/<slug>/wahlabend/eintragen`** (Handy reicht; Token wird im Browser gemerkt) oder `deploy/wahlabend.sh` | Felix |
+
+Kein Stand wird je überschrieben — nur angelegt oder gelöscht. Maßgeblich ist
+ein vorläufiges Ergebnis, sonst der jüngste Stand (`WahlabendService.pickLatest`).
+
+**Token:** `WAHLABEND_TOKEN` in `~/services/sonntagsfrage/.env` auf dem
+Server (Modus 600). `setup-sonntagsfrage.sh` trägt es nach, wenn es fehlt.
+Ohne Token ist das Eintragen gesperrt, nicht offen.
+
+### Checkliste am Wahltag
+
+1. **Vormittags:** `live:`-Block der Wahl in `elections.yaml` prüfen —
+   antwortet die CSV-URL (`curl -sI <url>`), stimmt die Kopfzeile noch mit
+   den konfigurierten Spaltennamen überein? Mecklenburg-Vorpommern kündigt an,
+   die endgültige URL erst in der Wahlwoche zu nennen. Änderung → committen,
+   pushen, `~/scripts/update-sonntagsfrage.sh`.
+2. **Wahl ohne `live:`-Block** (Berlin 2026): sobald die Landeswahlleitung ihre
+   Datei zeigt, den Block nach dem MV-Muster anlegen — oder den Abend komplett
+   von Hand füttern.
+3. **18:00:** Prognose ARD und ZDF eintippen (Formular). Uhrzeit `18:00`,
+   Quelle aus der Vorschlagsliste, sieben Zahlen, fertig. "Sonstige" darf
+   fehlen, der Rest bis 100 wird ergänzt.
+4. **Abend:** Hochrechnungen nach Bedarf nachtragen; die Landeswahlleitung
+   kommt von selbst und steht als "Auszählungsstand" mit "x von y
+   Wahlbezirken" da.
+5. **Nachts:** Das vorläufige Ergebnis erkennt der Poller an
+   `districtsCounted == districtsTotal` und holt dann auch die Sitze. Hat die
+   Quelle keine Fortschrittsspalte (Sachsen-Anhalt), steht `kind: VORLAEUFIG`
+   fest im Block — bei einer laufenden Auszählung vorher entfernen, nachts
+   wieder setzen.
+6. **Wochen später:** amtliches Endergebnis in `elections.yaml` (Abschnitt 8).
+   Damit ist der Wahlabend abgeschlossen und wird zum Archiv.
+
+### Neue Quelle konfigurieren (`live:` in `elections.yaml`)
+
+Alle Landeswahlleitungen liefern dasselbe Muster: eine Zeile für das Land,
+eine Spalte je Partei, eine Spalte mit den gültigen Stimmen. Der Adapter
+(`CsvResultSource`) ist deshalb Konfiguration, kein Code:
+
+| Feld | Bedeutung |
+|---|---|
+| `url`, `charset` | CSV-Adresse; Zeichensatz, wenn nicht UTF-8 (MV: `ISO-8859-1`) |
+| `row` | Spalte → Wert, das die Landeszeile findet. Leerer Wert = leere Zelle (SA: `Wahllokal: ""` = Urne+Brief) |
+| `validVotes` | Spalte mit den gültigen Zweitstimmen — Nenner der Prozente und Anker für die Kopfzeile (Titelzeilen davor stören nicht) |
+| `partyPattern` **oder** `partiesAfter` | Regex über Spaltennamen, Gruppe 1 = Partei (SA: `^F\d+\.(.+)$`) — oder: alle Spalten hinter dieser sind Parteien (MV: `Gültige Stimmen`) |
+| `ignore` | Spalten, die trotz Position keine Partei sind (`Einzelbewerber`) |
+| `aliases` | Quellname → DAWUM-Kürzel, falls die eingebauten (`PartyAliases`) nicht reichen. Unbekannte Namen zählen zu "Sonstige" |
+| `turnout` oder `voters`+`eligible` | fertige Wahlbeteiligung, oder sie wird gerechnet |
+| `districtsTotal`, `districtsCounted` | Fortschritt; gleich = vorläufiges Ergebnis |
+| `timestamp`, `timestampFormat` | Berechnungszeitpunkt aus der Datei; sonst `Last-Modified`, sonst Abrufzeit |
+| `kind`, `completeWhen` | Reifegrad fest setzen, bzw. Spalte → Wert, ab dem die Auszählung als fertig gilt |
+| `seats.*` | zweite Datei: "lang" (`partyColumn` + `seatsColumn`, SA) oder "breit" (`row` + `partiesAfter`, MV). Sitze werden nur beim vorläufigen Ergebnis übernommen |
+
+Prüfen: `mvn test` (`CsvResultSourceTest` hat je ein Beispiel beider Formate),
+dann die Datei mit `curl` holen und die Kopfzeile mit den Feldern vergleichen.
+Parteinamen müssen nach `PartyAliases` auf ein DAWUM-Kürzel passen
+("Die Linke" → "Linke", "GRÜNE" → "Grüne", "FREIE WÄHLER" → "Freie Wähler"
+sind eingebaut).
+
+### API
+
+```bash
+# Lesen (offen)
+curl -s https://fherrmann.com/wahlen/api/parliaments/sachsen-anhalt/wahlabend | python3 -m json.tool
+
+# Eintragen (Token). Uhrzeit HH:mm: ab 18 Uhr der Wahltag, davor der Folgetag.
+curl -s -X POST https://fherrmann.com/wahlen/api/wahlabend/sachsen-anhalt/2026-09-06/reports \
+  -H "Authorization: Bearer $WAHLABEND_TOKEN" -H "Content-Type: application/json" \
+  -d '{"kind":"HOCHRECHNUNG","reportedAt":"18:28","source":"ARD / infratest dimap",
+       "results":{"CDU":18.5,"AfD":44.5,"Linke":9.4,"SPD":8.2,"FDP":2.1,"Grüne":8.9,"BSW":5.0},
+       "seats":{"CDU":16,"AfD":39,"Linke":8,"SPD":7,"Grüne":8,"BSW":5}}'
+
+# Löschen
+curl -s -X DELETE https://fherrmann.com/wahlen/api/wahlabend/reports/<id> -H "Authorization: Bearer $WAHLABEND_TOKEN"
+
+# Kurzform
+deploy/wahlabend.sh sachsen-anhalt 2026-09-06 PROGNOSE 18:00 "ZDF / Forschungsgruppe Wahlen" \
+  "CDU=18.5 AfD=44.0 Linke=9.0 SPD=9.0 FDP=2.5 Grüne=8.5 BSW=4.8"
+```
+
+### Wenn am Wahlabend etwas klemmt
+
+| Symptom | Erster Griff |
+|---|---|
+| Block zeigt "Abruf gestört: …" | `docker compose logs --tail=80 app \| grep Wahlabend`; CSV-URL im Browser öffnen. Kopfzeile geändert? → `live:`-Block anpassen. Bis dahin von Hand eintragen |
+| Automatik sagt "Auszählungsstand", obwohl alles ausgezählt ist | Quelle ohne Fortschrittsspalte: `kind: VORLAEUFIG` setzen, deployen |
+| Falscher Stand eingetragen | Formular → "löschen" in der Liste unten, oder `DELETE` per API |
+| Formular meldet "nicht konfiguriert" | `WAHLABEND_TOKEN` fehlt in `.env` → `setup-sonntagsfrage.sh` oder von Hand, dann `docker compose up -d` |
+| Block bleibt Wochen später "live" | Das ist Absicht — bis das amtliche Ergebnis in `elections.yaml` steht (Abschnitt 8) |
+| Prozentsumme abgelehnt | Erwartet werden 95–101; Kürzel prüfen (Fehlermeldung listet die bekannten) |
+
+### Datenmodell (V2)
+
+`election_report` ist ein Stand (Art, Zeitpunkt, Quelle, Beteiligung, Notiz,
+Fingerabdruck); seine Parteizeilen liegen in `election_result` mit gesetztem
+`report_id`. Amtliche Endergebnisse bleiben, wie in V1, Zeilen ohne
+`report_id` aus `elections.yaml`. `ResultKind` kennt zusätzlich
+`AUSZAEHLUNG`. Solange ein amtliches Ergebnis fehlt, vertritt der jüngste
+Stand es in der API (`lastElection.results`, mit `resultKind`) — so haben die
+Balken der Sonntagsfrage schon am Montag einen Referenzstrich.
+
+---
+
+## 10. Bekannte Fallstricke
 
 ### ⚠️ Snap-Docker verbietet `/opt`-Bind-Mounts
 Siehe oben. Wenn Container-DNS oder Port-Forwarding plötzlich kaputt sind
@@ -293,11 +419,12 @@ Der Alltag (`update-sonntagsfrage.sh`) kommt ohne sudo aus.
 
 ---
 
-## 10. Wenn etwas kaputt ist
+## 11. Wenn etwas kaputt ist
 
 | Symptom | Erster Griff |
 |---|---|
 | 502 auf `/wahlen` | `docker compose ps` — läuft `wahlen-app`? `docker compose logs --tail=100 app` |
+| Statusboard-Karte rot ("Fehler"), Import läuft aber | Bis 2026-09-07 blieb ein alter `last_error` stehen, bis DAWUM das nächste Mal wirklich neue Daten hatte. Seitdem löscht jeder erfolgreiche Abruf ihn. Bleibt er, ist der Fehler echt: `/wahlen/daten` |
 | Seite da, Daten alt | `/wahlen/daten` ansehen: dort stehen getrennt "zuletzt nachgefragt" und "zuletzt neue Daten übernommen". Liegen die weit auseinander, hat DAWUM einfach nichts Neues — das ist der Normalfall, kein Fehler |
 | Statusboard-Karte sagt "Dienst nicht erreichbar", Seite läuft aber | CORS: steht die Statusboard-Herkunft in `wahlen.cors.allowed-origins`? Prüfen mit `curl -s -i -H "Origin: https://status.fherrmann.com" https://fherrmann.com/wahlen/api/meta \| grep -i access-control` |
 | `Schema validation: missing table` | Flyway lief nicht, siehe Fallstrick oben |
@@ -318,12 +445,11 @@ docker compose up -d --build     # importiert beim Start alles neu, dauert ~1 mi
 
 ---
 
-## 11. Offen / als Nächstes
+## 12. Offen / als Nächstes
 
-- **Wahlabend-Modus.** Das Datenmodell trägt ihn schon:
-  `election_result.kind` kennt `PROGNOSE | HOCHRECHNUNG | VORLAEUFIG |
-  AMTLICH`, `reported_at` macht Zwischenstände historisierbar. Es fehlen die
-  Adapter je Landeswahlleiter plus ein geschützter POST-Endpoint als
-  manueller Notnagel für 18:00 Uhr. Nächste Kandidaten: Sachsen-Anhalt
-  (06.09.2026), Berlin und Mecklenburg-Vorpommern (beide 20.09.2026).
+- **Berlin 2026 (20.09.):** `live:`-Block anlegen, sobald die
+  Landeswahlleitung ihr Datenformat zeigt (siehe Abschnitt 9). Bis dahin
+  Handeingabe.
+- **Wahlabend-Chart:** der Verlauf des Abends ist bisher nur eine Tabelle; ein
+  Linienchart je Partei über die Uhrzeit wäre der nächste Schritt.
 - Fehlerspannen im Chart darstellen.

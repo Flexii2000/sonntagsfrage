@@ -450,3 +450,82 @@ a.parliament-card:hover { text-decoration: none; transform: translateY(-2px); bo
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* ----------------------------------------------------------------- Wahlabend */
+
+:root { --live: #c8102e; }
+@media (prefers-color-scheme: dark) { :root { --live: #ff6b6b; } }
+
+.eyebrow.live.is-live { color: var(--live); }
+.live-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--live);
+  margin-right: 0.4rem;
+  vertical-align: 1px;
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+@keyframes live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.badge.live { background: rgba(200, 16, 46, 0.12); color: var(--live); }
+
+.wahlabend .card h2 .sub-inline,
+.wahlabend-compact h2 .sub-inline {
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-left: 0.4rem;
+  letter-spacing: 0;
+}
+.wahlabend .notice p { margin: 0; }
+
+table.data.compact th, table.data.compact td { padding: 0.35rem 0.5rem; }
+table.data td.pos { color: var(--pos); font-weight: 600; }
+table.data td.neg { color: var(--neg); font-weight: 600; }
+table.data.history tr.now td { font-weight: 600; background: var(--accent-soft); }
+
+.stamp { margin: 0.6rem 0 0; }
+.stamp .warn { color: var(--neg); }
+
+/* ------------------------------------------------------ Wahlabend-Formular */
+
+.wahlabend-form label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.82rem; color: var(--muted); }
+.wahlabend-form input, .wahlabend-form select {
+  font: inherit; font-size: 0.95rem; color: var(--text);
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 0.45rem 0.6rem; min-height: 38px;
+}
+.form-grid { display: grid; gap: 0.7rem; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .form-grid { grid-template-columns: 1fr 1fr; } }
+.party-rows { display: flex; flex-direction: column; gap: 0.4rem; }
+.party-row { display: grid; grid-template-columns: 1.6fr 1fr 0.8fr auto; gap: 0.4rem; align-items: center; }
+.party-row.head { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
+.party-row .remove {
+  appearance: none; border: 1px solid var(--border); background: transparent; color: var(--muted);
+  border-radius: 999px; width: 30px; height: 30px; cursor: pointer; font-size: 1rem;
+}
+.wahlabend-form button[type="submit"], .wahlabend-form .secondary {
+  appearance: none; font: inherit; font-size: 0.9rem; font-weight: 550; cursor: pointer;
+  border-radius: 999px; padding: 0.5rem 1.1rem; min-height: 38px;
+}
+.wahlabend-form button[type="submit"] { background: var(--accent); color: #fff; border: 0; }
+.wahlabend-form button[type="submit"][disabled] { opacity: 0.5; cursor: wait; }
+.wahlabend-form .secondary, .report-list .secondary {
+  background: var(--card-bg); color: var(--text); border: 1px solid var(--border);
+  font: inherit; font-size: 0.82rem; border-radius: 999px; padding: 0.3rem 0.8rem; cursor: pointer;
+}
+.form-actions { display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; margin: 1rem 0 0; }
+.form-status-ok { color: var(--pos); }
+.form-status-error { color: var(--neg); }
+.report-list { list-style: none; margin: 0.5rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.87rem; }
+.report-list li { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.4rem 0; border-top: 1px solid var(--grid); }
+.report-list li:first-child { border-top: 0; }
+.report-list .dim { color: var(--muted); }
+
+/* Am Wahlabend stehen auch laengere Namen in den Balken (Freie Waehler,
+   Tierschutzpartei) — etwas mehr Platz fuer die Namensspalte. */
+.wahlabend .figure-row, .wahlabend-compact .figure-row { grid-template-columns: 6.4rem 1fr auto; }
+@media (max-width: 480px) {
+  .wahlabend .figure-row, .wahlabend-compact .figure-row { grid-template-columns: 5.2rem 1fr auto; }
+}

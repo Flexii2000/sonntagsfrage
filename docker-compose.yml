@@ -40,6 +40,9 @@ services:
       DB_USER: ${DB_USER:-wahlen}
       DB_PASSWORD: ${DB_PASSWORD:-wahlen}
       TZ: Europe/Berlin
+      # Geheimnis fuer das Eintragen von Prognosen/Hochrechnungen am Wahlabend
+      # (siehe AGENT-RUNBOOK.md). Leer = Eintragen gesperrt.
+      WAHLABEND_TOKEN: ${WAHLABEND_TOKEN:-}
       JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=70 -Xss512k"
     ports:
       # Nur lokal gebunden — nach aussen geht ausschliesslich nginx.

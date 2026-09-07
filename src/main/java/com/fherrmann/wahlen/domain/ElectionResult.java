@@ -17,9 +17,10 @@ import java.time.Instant;
 /**
  * Ergebnis einer Partei bei einer Wahl.
  *
- * <p>{@code reportedAt} ist nur fuer Wahlabend-Staende (Prognose/Hochrechnung)
- * gesetzt und macht sie historisierbar; Endergebnisse lassen das Feld leer und
- * sind dadurch pro (Wahl, Partei, Art) eindeutig.
+ * <p>{@code reportedAt} und {@code report} sind nur fuer Wahlabend-Staende
+ * (Prognose/Hochrechnung/Auszaehlung/vorlaeufig) gesetzt und machen sie
+ * historisierbar; amtliche Endergebnisse lassen beides leer und sind dadurch
+ * pro (Wahl, Partei, Art) eindeutig.
  */
 @Entity
 @Table(name = "election_result")
@@ -50,6 +51,11 @@ public class ElectionResult {
     private Instant reportedAt;
 
     private String source;
+
+    /** Gesetzt fuer Wahlabend-Staende; Endergebnisse aus elections.yaml haben keinen. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "report_id")
+    private ElectionReport report;
 
     protected ElectionResult() {
     }
@@ -111,5 +117,13 @@ public class ElectionResult {
 
     public void setSource(String source) {
         this.source = source;
+    }
+
+    public ElectionReport getReport() {
+        return report;
+    }
+
+    public void setReport(ElectionReport report) {
+        this.report = report;
     }
 }

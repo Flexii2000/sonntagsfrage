@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- ======================================================================
+     Der Wahlabend-Block einer Wahl. Wird auf der Detailseite eingebettet und
+     vom Browser waehrend des Abends als Ganzes nachgeladen (PageController
+     /{slug}/wahlabend/fragment) — deshalb traegt er seine Daten fuer den
+     Sitzbogen als JSON gleich mit.
+     ====================================================================== -->
+<section class="section wahlabend" id="wahlabend" th:fragment="block(wa, slug, waJson)"
+         th:attr="data-wahlabend='block',data-phase=${wa.phase},data-refresh=${wa.refreshSeconds},
+                  data-slug=${slug},data-latest=${wa.latest != null ? wa.latest.id : 0},
+                  data-count=${#lists.size(wa.history)}">
+  <script type="application/json" class="wahlabend-data" th:utext="${waJson}">{}</script>
+
+  <header>
+    <p class="eyebrow live" th:classappend="${wa.live ? 'is-live' : ''}">
+      <span class="live-dot" th:if="${wa.live}" aria-hidden="true"></span>Wahlabend<th:block
+        th:if="${wa.live}"> · live</th:block>
+    </p>
+    <h2 th:text="${wa.title}">Landtagswahl 2026</h2>
+    <p class="sub" th:text="${wa.headline}">Hochrechnung von 19:32 Uhr</p>
+  </header>
+
+  <!-- Vor 18 Uhr -->
+  <div class="card notice" th:if="${wa.phase == 'AUSSTEHEND'}">
+    <p>
+      Die Wahllokale schließen um <b>18 Uhr</b>. Ab dann erscheinen hier die Prognose,
+      die Hochrechnungen und der Stand der Auszählung. Die Seite aktualisiert sich selbst —
+      nichts neu laden.
+    </p>
+    <p class="hint" style="margin:0.4rem 0 0">
+      Bis dahin unten: was die Umfragen zuletzt sagten.
+    </p>
+  </div>
+
+  <!-- Nach 18 Uhr, aber noch kein Stand -->
+  <div class="card notice" th:if="${wa.phase == 'LIVE' and wa.latest == null}">
+    <p>
+      Die Wahllokale sind geschlossen, ein erster Stand ist noch nicht da. Die Seite
+      fragt alle <span th:text="${wa.refreshSeconds}">60</span> Sekunden nach.
+    </p>
+    <p class="hint" style="margin:0.4rem 0 0" th:if="${wa.sourceLastCheck != null}">
+      Landeswahlleitung zuletzt abgefragt <span th:text="${wa.sourceLastCheck}">–</span> Uhr<th:block
+        th:if="${wa.sourceError != null}"> — <span th:text="${wa.sourceError}">Fehler</span></th:block>.
+    </p>
+  </div>
+
+  <div class="split" th:if="${wa.latest != null}">
+    <!-- ------------------------------------------------ Stand -->
+    <div class="card">
+      <h2>
+        <span th:text="${wa.latest.kindLabel}">Hochrechnung</span>
+        <span class="sub-inline">
+          <span th:text="${wa.latest.timeLabel}">19:32</span> Uhr ·
+          <a th:if="${wa.latest.sourceUrl != null}" th:href="${wa.latest.sourceUrl}" rel="noopener"
+             th:text="${wa.latest.source}">Quelle</a>
+          <span th:unless="${wa.latest.sourceUrl != null}" th:text="${wa.latest.source}">Quelle</span>
+        </span>
+      </h2>
+      <p class="sub">
+        <th:block th:if="${wa.latest.note != null}"><span th:text="${wa.latest.note}">Hinweis</span> · </th:block>
+        <th:block th:if="${wa.latest.turnout != null}">Wahlbeteiligung
+          <span th:text="${#numbers.formatDecimal(wa.latest.turnout, 1, 1, 'COMMA')} + ' %'">0 %</span></th:block>
+        <th:block th:if="${wa.previousDate != null}">
+          · Strich im Balken und Differenz: Wahl
+          <span th:text="${#temporals.format(wa.previousDate, 'yyyy')}">2021</span></th:block>
+      </p>
+      <div class="figures">
+        <!-- Kleinstparteien unter 1 % nur im Verlauf unten, nicht als Balken. -->
+        <th:block th:each="party : ${wa.parties}"
+                  th:if="${wa.latest.results.containsKey(party.id)
+                          and (party.id == 0 or wa.latest.results.get(party.id) >= 1.0
+                               or (wa.latest.seats.get(party.id) ?: 0) > 0)}"
+                  th:with="v=${wa.latest.results.get(party.id)},
+                           prev=${wa.previousResults.get(party.id)}">
+          <div th:replace="~{fragments :: figureRow(
+                  ${party}, ${v},
+                  ${prev != null ? v - prev : null},
+                  50.0, ${prev})}"></div>
+        </th:block>
+      </div>
+
+      <!-- Wie gut lagen die Umfragen? -->
+      <div class="table-scroll" th:if="${!wa.pollsBefore.isEmpty()}" style="margin-top:1rem">
+        <table class="data compact">
+          <thead>
+          <tr>
+            <th class="left">Partei</th>
+            <th th:text="${wa.latest.kindLabel}">Stand</th>
+            <th>Umfragen</th>
+            <th>Δ</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="party : ${wa.parties}"
+              th:if="${party.id != 0 and wa.latest.results.containsKey(party.id) and wa.pollsBefore.containsKey(party.id)
+                      and wa.latest.results.get(party.id) >= 1.0}"
+              th:with="v=${wa.latest.results.get(party.id)}, p=${wa.pollsBefore.get(party.id)}, d=${v - p}">
+            <td class="left">
+              <span class="party-head">
+                <span class="key" th:style="'background:' + ${party.colorLight}"
+                      th:attr="data-color-light=${party.colorLight},data-color-dark=${party.colorDark}"></span>
+                <span th:text="${party.shortcut}">X</span>
+              </span>
+            </td>
+            <td th:text="${#numbers.formatDecimal(v, 1, 1, 'COMMA')}">0,0</td>
+            <td class="dim" th:text="${#numbers.formatDecimal(p, 1, 1, 'COMMA')}">0,0</td>
+            <td th:classappend="${d > 0.05 ? 'pos' : (d < -0.05 ? 'neg' : 'dim')}"
+                th:text="${(d > 0 ? '+' : '') + #numbers.formatDecimal(d, 1, 1, 'COMMA')}">+0,0</td>
+          </tr>
+          </tbody>
+        </table>
+        <p class="hint" style="margin:0.5rem 0 0">
+          Umfragen: geglätteter Stand aller Institute zum Wahltag
+          (<span th:text="${#temporals.format(wa.pollsAsOf, 'd.M.yyyy')}">Datum</span>).
+          Δ in Prozentpunkten.
+        </p>
+      </div>
+    </div>
+
+    <!-- ------------------------------------------------ Sitze -->
+    <div class="card" th:if="${wa.seats != null}">
+      <h2>Sitzverteilung</h2>
+      <p class="sub" th:text="${wa.seats.basis}">Verfahren</p>
+      <svg class="seat-arc" th:id="'wahlabend-seat-arc'"></svg>
+      <p class="majority-note">
+        <th:block th:each="e,it : ${wa.seats.entries}">
+          <span th:text="${#lists.toList(wa.parties).?[id == __${e.partyId}__][0]?.shortcut ?: '?'}">X</span>
+          <b th:text="${e.seats}">0</b><th:block th:if="${!it.last}"> · </th:block>
+        </th:block>
+      </p>
+      <p class="hint" th:if="${!wa.seats.belowThreshold.isEmpty()}">
+        Ohne Sitz<th:block th:if="${wa.seats.threshold > 0}"> (unter der
+        <span th:text="${#numbers.formatDecimal(wa.seats.threshold, 1, 0, 'COMMA')}">5</span>-%-Hürde)</th:block>:
+        <th:block th:each="entry,it : ${wa.seats.belowThreshold}">
+          <span th:text="${#lists.toList(wa.parties).?[id == __${entry.key}__][0]?.shortcut ?: '?'}">X</span>
+          <span th:text="'(' + ${#numbers.formatDecimal(entry.value, 1, 1, 'COMMA')} + ' %)'">(0 %)</span><th:block
+            th:if="${!it.last}">, </th:block>
+        </th:block>
+      </p>
+      <p class="hint" th:unless="${wa.latest.seatsOfficial}">
+        Vereinfachte Projektion aus den Prozentwerten — Direktmandate, Überhang- und
+        Ausgleichsmandate kennt sie nicht. Die Sender rechnen mit mehr Information.
+      </p>
+
+      <th:block th:if="${!wa.coalitions.isEmpty()}">
+        <h3 style="margin-top:1rem">Rechnerische Mehrheiten</h3>
+        <ul class="coalitions">
+          <li class="coalition" th:each="c : ${wa.coalitions}">
+            <span class="keys">
+              <i th:each="pid : ${c.partyIds}"
+                 th:with="p=${#lists.toList(wa.parties).?[id == __${pid}__][0]}"
+                 th:style="'background:' + ${p != null ? p.colorLight : '#8A8F98'}"
+                 th:attr="data-color-light=${p != null ? p.colorLight : '#8A8F98'},
+                          data-color-dark=${p != null ? p.colorDark : '#9BA1A9'}"></i>
+            </span>
+            <span class="nm" th:text="${c.name}">Koalition</span>
+            <span class="who">
+              <th:block th:each="pid,it : ${c.partyIds}"
+                        th:with="p=${#lists.toList(wa.parties).?[id == __${pid}__][0]}">
+                <span th:text="${p != null ? p.shortcut : pid}">X</span><th:block
+                  th:if="${!it.last}"> + </th:block>
+              </th:block>
+            </span>
+            <span class="seats">
+              <b th:text="${c.seats}">0</b> Sitze
+              <span th:text="'(+' + ${c.over} + ')'">(+0)</span>
+            </span>
+          </li>
+        </ul>
+        <p class="hint">Was rechnerisch geht — keine Aussage darüber, wer mit wem will.</p>
+      </th:block>
+    </div>
+  </div>
+
+  <!-- ------------------------------------------------ Verlauf -->
+  <div class="card table-scroll" th:if="${!wa.history.isEmpty()}" style="margin-top:1rem">
+    <h2>Verlauf des Abends</h2>
+    <p class="sub">Jeder Stand, so wie er gemeldet wurde. Der jüngste bzw. das vorläufige Ergebnis ist hervorgehoben.</p>
+    <table class="data history">
+      <thead>
+      <tr>
+        <th class="left">Zeit</th>
+        <th class="left">Art</th>
+        <th class="left">Quelle</th>
+        <th th:each="party : ${wa.parties}">
+          <span class="party-head">
+            <span class="key" th:style="'background:' + ${party.colorLight}"
+                  th:attr="data-color-light=${party.colorLight},data-color-dark=${party.colorDark}"></span>
+            <span th:text="${party.shortcut}">X</span>
+          </span>
+        </th>
+        <th>Beteiligung</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr th:each="r : ${wa.history}" th:classappend="${r.id == wa.latest.id ? 'now' : ''}">
+        <td class="left" th:text="${r.timeLabel}">18:00</td>
+        <td class="left" th:text="${r.kindLabel}">Prognose</td>
+        <td class="left dim" th:text="${r.source}">ARD</td>
+        <td th:each="party : ${wa.parties}" th:with="v=${r.results.get(party.id)}"
+            th:classappend="${v == null ? 'dim' : ''}"
+            th:text="${v == null ? '–' : #numbers.formatDecimal(v, 1, 1, 'COMMA')}">–</td>
+        <td class="dim" th:text="${r.turnout != null ? #numbers.formatDecimal(r.turnout, 1, 1, 'COMMA') : '–'}">–</td>
+      </tr>
+      </tbody>
+    </table>
+    <p class="hint" style="margin-top:0.6rem">
+      Prognose: 18 Uhr, aus Nachwahlbefragungen. Hochrechnung: aus ausgezählten Stimmbezirken hochgerechnet.
+      Auszählungsstand: die Landeswahlleitung, so weit sie ist. Vorläufiges Ergebnis: alle Wahlbezirke
+      ausgezählt, amtlich wird es erst mit der Feststellung durch den Landeswahlausschuss.
+    </p>
+  </div>
+
+  <p class="hint stamp" th:if="${wa.refreshSeconds > 0}">
+    Aktualisiert sich alle <span th:text="${wa.refreshSeconds}">60</span> Sekunden<th:block
+      th:if="${wa.sourceLastCheck != null}"> · Landeswahlleitung zuletzt abgefragt
+      <span th:text="${wa.sourceLastCheck}">–</span> Uhr</th:block><th:block
+      th:if="${wa.sourceError != null}"> · <span class="warn">Abruf gestört: <span th:text="${wa.sourceError}">Fehler</span></span></th:block>.
+    <span class="checked"></span>
+  </p>
+</section>
+
+<!-- ======================================================================
+     Kompaktfassung fuer die Startseite: der massgebliche Stand als Balken.
+     ====================================================================== -->
+<div class="card wahlabend-compact" th:fragment="compact(wa, slug, waJson)"
+     th:attr="data-wahlabend='compact',data-phase=${wa.phase},data-refresh=${wa.refreshSeconds},
+              data-slug=${slug},data-latest=${wa.latest != null ? wa.latest.id : 0},
+              data-count=${#lists.size(wa.history)}">
+  <script type="application/json" class="wahlabend-data" th:utext="${waJson}">{}</script>
+  <p class="eyebrow live is-live"><span class="live-dot" aria-hidden="true"></span>Wahlabend · live</p>
+  <h2 th:if="${wa.latest != null}">
+    <span th:text="${wa.latest.kindLabel}">Hochrechnung</span>
+    <span class="sub-inline"><span th:text="${wa.latest.timeLabel}">19:32</span> Uhr · <span th:text="${wa.latest.source}">Quelle</span></span>
+  </h2>
+  <h2 th:if="${wa.latest == null}" th:text="${wa.headline}">Gleich geht es los</h2>
+  <p class="sub" th:if="${wa.latest != null and wa.previousDate != null}">
+    Strich im Balken und Differenz: Wahl <span th:text="${#temporals.format(wa.previousDate, 'yyyy')}">2021</span>.
+  </p>
+  <div class="figures" th:if="${wa.latest != null}">
+    <th:block th:each="party : ${wa.parties}"
+              th:if="${wa.latest.results.containsKey(party.id)
+                      and (party.id == 0 or wa.latest.results.get(party.id) >= 1.0
+                           or (wa.latest.seats.get(party.id) ?: 0) > 0)}"
+              th:with="v=${wa.latest.results.get(party.id)}, prev=${wa.previousResults.get(party.id)}">
+      <div th:replace="~{fragments :: figureRow(${party}, ${v}, ${prev != null ? v - prev : null}, 50.0, ${prev})}"></div>
+    </th:block>
+  </div>
+  <p class="majority-note" th:if="${wa.seats != null}" style="text-align:left;margin-top:0.8rem">
+    Sitze:
+    <th:block th:each="e,it : ${wa.seats.entries}">
+      <span th:text="${#lists.toList(wa.parties).?[id == __${e.partyId}__][0]?.shortcut ?: '?'}">X</span>
+      <b th:text="${e.seats}">0</b><th:block th:if="${!it.last}"> · </th:block>
+    </th:block>
+    — <span th:text="${wa.seats.majority}">0</span> für die Mehrheit
+  </p>
+  <p style="margin-top:1rem">
+    <a th:href="@{/{slug}(slug=${slug})}">Hochrechnungen, Sitzverteilung und Verlauf des Abends →</a>
+  </p>
+</div>
+
+</body>
+</html>

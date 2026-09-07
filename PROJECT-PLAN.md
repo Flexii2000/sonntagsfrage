@@ -270,6 +270,10 @@ Farbe.
 
 ## 8. Phase 2 — Wahlabend
 
+> **Umgesetzt am 2026-09-07** — Betrieb und Konfiguration stehen in
+> `AGENT-RUNBOOK.md`, Abschnitt 9. Der Plan unten ist der Stand vor dem Bau;
+> was anders kam, steht in Abschnitt 12.
+
 Nicht in v1 implementiert, aber das Modell ist so gebaut, dass es rein
 additiv wird:
 
@@ -373,3 +377,29 @@ Nachgetragen am 2026-08-22, damit dieses Dokument nicht das Falsche behauptet.
   `.../data` — erst beim Deploy auf dem Server aufgefallen.
 - **`eclipse-temurin:25-jre` hat weder `curl` noch `wget`**, der
   Container-Healthcheck lief deshalb zunächst ins Leere.
+
+Nachgetragen am 2026-09-07, Wahlabend (Phase 2):
+
+- **Ein Stand ist eine eigene Tabelle** (`election_report`, V2), nicht nur
+  Zeilen mit `reported_at`: Wahlbeteiligung, Notiz ("x von y Wahlbezirken"),
+  Fingerabdruck und eine ID zum Löschen brauchen einen Platz. Die
+  Parteizeilen bleiben in `election_result` (mit `report_id`).
+- **Kein Adapter je Landeswahlleiter, sondern ein konfigurierbarer
+  CSV-Adapter.** Sachsen-Anhalt und Mecklenburg-Vorpommern liefern beide
+  "eine Landeszeile, eine Spalte je Partei" — die Unterschiede (Präfixe,
+  Titelzeilen, Zeichensatz, Fortschrittsspalten) sind ein `live:`-Block in
+  `elections.yaml`. Berlin nennt sein Format erst am Wahlabend.
+- **Ein vierter Reifegrad:** `AUSZAEHLUNG` (Zwischenstand der amtlichen
+  Auszählung) neben Prognose, Hochrechnung und vorläufigem Ergebnis. Die
+  Landeswahlleitung hochzurechnen wäre eine Prognose, die diese Seite nicht
+  macht.
+- **ARD/ZDF bleiben Handarbeit.** Es gibt keine offene Schnittstelle für
+  Prognosen und Hochrechnungen; wahlrecht.de tabelliert sie erst hinterher.
+  Deshalb das Formular mit Token statt eines Scrapers, der am Wahlabend
+  bricht.
+- **Der Block wird als HTML-Fragment nachgeladen**, nicht als JSON neu
+  gezeichnet — ein Template für Erstaufruf und Aktualisierung. Nur der
+  Sitzbogen entsteht im Browser.
+- **"Live" endet mit dem amtlichen Ergebnis**, nicht nach einer Frist — so
+  gewünscht. Heiß (Minutentakt) sind nur die ersten 36 Stunden, danach alle
+  15 Minuten.
