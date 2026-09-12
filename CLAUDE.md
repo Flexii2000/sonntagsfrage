@@ -31,8 +31,12 @@ Spring Boot 4 + Postgres, ausgeliefert als Docker-Compose-Stack.
   liegen, ist hingenommen; Farbe ist ohnehin nicht der einzige
   Identitätskanal (Direktbeschriftung, Legende mit Text, Tooltip,
   Tabellenansicht, Strichmuster-Schalter). Details in `reference/parties.yaml`.
-- **Der Koalitionsrechner bewertet nicht.** Er zeigt, was arithmetisch geht,
-  und filtert nicht danach, wer mit wem koalieren würde.
+- **Der Koalitionsrechner bewertet nicht** — mit genau zwei bewussten
+  Ausnahmen, die Felix am 2026-09-12 so entschieden hat: Bündnisse von SPD,
+  Grünen oder Linken mit der AfD erscheinen nie. Bündnisse mit der AfD
+  („Brandmauer") und mit Union und Linke zusammen („Unvereinbarkeitsbeschluss")
+  werden gerechnet, aber standardmäßig ausgeblendet; zwei Schalter im UI holen
+  sie zurück. Weitere Filter danach, wer mit wem „will", gibt es nicht.
 - **Die Sitzprojektion ist eine Näherung** und muss im UI auch so
   gekennzeichnet bleiben.
 - **DAWUM höflich behandeln.** Fester User-Agent, `last_update.txt` vor dem

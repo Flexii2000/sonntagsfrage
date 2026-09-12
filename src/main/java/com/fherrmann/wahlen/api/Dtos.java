@@ -94,8 +94,14 @@ public final class Dtos {
             Map<Integer, Double> belowThreshold, double threshold, String basis) {
     }
 
+    /**
+     * @param afd        AfD beteiligt — die Seite blendet solche Buendnisse hinter
+     *                   dem Schalter "Brandmauer" aus
+     * @param unionLinke Union und Linke zusammen — Schalter "Unvereinbarkeitsbeschluss"
+     */
     public record CoalitionDto(
-            List<Integer> partyIds, int seats, String name, boolean minimal, int over) {
+            List<Integer> partyIds, int seats, String name, boolean minimal, int over,
+            boolean afd, boolean unionLinke) {
     }
 
     public record HouseEffectDto(

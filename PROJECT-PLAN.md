@@ -185,11 +185,18 @@ mandate, Grundmandatsklausel und Direktmandate werden nicht modelliert.
 ### 5.4 Koalitionsrechner (`CoalitionFinder`)
 
 Alle Kombinationen aus den Parlamentsparteien, die eine Mehrheit erreichen,
-sortiert nach Größe. Bekannte Konstellationen bekommen ihren Namen
-(Große Koalition, Ampel, Jamaika, Kenia, Deutschland, Schwarz-Grün,
-Schwarz-Rot, Rot-Rot-Grün …), hergeleitet aus den Parteifarben.
-Neutral: es wird **nicht** gefiltert, wer mit wem „will" — nur, was
-rechnerisch geht. Ausgeschlossene Konstellationen bewertet die Seite nicht.
+sortiert nach Größe. Bekannte Konstellationen bekommen ihren gängigen Namen
+(Große Koalition, Ampel, Jamaika, Kenia, Deutschland-Koalition, Bahamas,
+Simbabwe, Brombeer, Rot-Rot, Rot-Rot-Grün …), alles andere eine Farbfolge in
+der Reihenfolge der Größe (Schwarz-Grün, Grün-Schwarz, Rot-Grün …). CDU, CSU
+und „CDU/CSU" gelten dabei als dasselbe Lager.
+
+Zwei Abweichungen von der reinen Arithmetik, seit 2026-09-12: Bündnisse von
+SPD, Grünen oder Linken mit der AfD erscheinen gar nicht (feste Regel).
+Bündnisse mit der AfD und Bündnisse mit Union und Linke zusammen werden
+gerechnet, aber standardmäßig ausgeblendet — zwei Schalter („Brandmauer gegen
+die AfD", „Unvereinbarkeitsbeschluss gegen die Linke") holen sie zurück, der
+Zustand bleibt im Browser gemerkt. Darüber hinaus wird nicht bewertet.
 
 ### 5.5 Featured-Auswahl (`FeaturedService`)
 

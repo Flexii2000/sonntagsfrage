@@ -23,7 +23,9 @@ Mode kennt und auf Hover verrät, was an einem bestimmten Tag Sache war.
   Wahl steht diese vorne, sonst der Bundestag
 - **Sitzprojektion** nach Sainte-Laguë inklusive Prozenthürde, als Sitzbogen
 - **Koalitionsrechner** — alle rechnerischen Mehrheiten ohne überflüssige
-  Partner, wertfrei
+  Partner, mit den gängigen Namen; Bündnisse von SPD, Grünen oder Linken mit
+  der AfD sind ausgenommen, AfD-Bündnisse und Union+Linke stehen hinter zwei
+  Schaltern („Brandmauer", „Unvereinbarkeitsbeschluss")
 - **Institutsvergleich**: wie stark weicht ein Institut im Schnitt vom
   Konsens aller anderen ab (Leave-one-out gerechnet)
 - **Wahlabend-Modus**: ab 18 Uhr am Wahltag Prognose, Hochrechnungen und der

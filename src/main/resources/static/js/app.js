@@ -31,6 +31,50 @@ function applyThemeColors() {
 applyThemeColors();
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyThemeColors);
 
+/* Brandmauer-Schalter der Koalitionslisten. Zustand im Browser gemerkt, Standard:
+ * beide an. Das Ausblenden macht CSS ueber data-Attribute am Block; hier werden
+ * Kaestchen, Attribute und die Zaehlung zusammengehalten, auch fuer einen
+ * Wahlabend-Block, der spaeter als Ganzes nachgeladen wird. */
+const FIREWALL_KEYS = { afd: 'wahlen.brandmauer.afd', linke: 'wahlen.brandmauer.linke' };
+const firewall = { afd: true, linke: true };
+for (const rule of Object.keys(FIREWALL_KEYS)) {
+  try {
+    const saved = localStorage.getItem(FIREWALL_KEYS[rule]);
+    if (saved !== null) firewall[rule] = saved === '1';
+  } catch (e) { /* egal */ }
+}
+
+function applyFirewall() {
+  document.querySelectorAll('.coalitions-block').forEach((block) => {
+    block.dataset.brandmauer = firewall.afd ? '1' : '0';
+    block.dataset.unvereinbar = firewall.linke ? '1' : '0';
+    block.querySelectorAll('.firewall-toggle').forEach((input) => {
+      input.checked = Boolean(firewall[input.dataset.rule]);
+    });
+    const items = [...block.querySelectorAll('.coalition')];
+    const hidden = items.filter((li) => (firewall.afd && li.dataset.afd === 'true')
+      || (firewall.linke && li.dataset.unionLinke === 'true')).length;
+    const count = block.querySelector('.hidden-count');
+    if (count) count.textContent = hidden ? ` (gerade ${hidden} ${hidden === 1 ? 'Bündnis' : 'Bündnisse'})` : '';
+    const empty = block.querySelector('.coalition-empty');
+    if (empty) empty.hidden = !(items.length > 0 && hidden === items.length);
+  });
+}
+
+document.addEventListener('change', (ev) => {
+  const input = ev.target;
+  if (!(input instanceof HTMLInputElement) || !input.classList.contains('firewall-toggle')) return;
+  firewall[input.dataset.rule] = input.checked;
+  try { localStorage.setItem(FIREWALL_KEYS[input.dataset.rule], input.checked ? '1' : '0'); } catch (e) { /* egal */ }
+  applyFirewall();
+});
+applyFirewall();
+new MutationObserver((records) => {
+  const relevant = records.some((r) => [...r.addedNodes].some((n) => n.nodeType === 1
+    && (n.matches('.coalitions-block') || n.querySelector('.coalitions-block'))));
+  if (relevant) applyFirewall();
+}).observe(document.body, { childList: true, subtree: true });
+
 /* Legende: immer vorhanden, mit Text — Farbe allein traegt hier keine Identitaet.
  * Klick blendet eine Serie aus. */
 function buildLegend(container, detail, chart, hidden) {

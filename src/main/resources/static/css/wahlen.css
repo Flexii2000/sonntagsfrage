@@ -320,6 +320,12 @@ h3 { font-size: 0.95rem; font-weight: 600; margin: 0 0 0.6rem; }
 .coalition .who { color: var(--muted); font-size: 0.79rem; }
 .coalition .seats { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
 .coalition .seats b { color: var(--text); }
+.coalition-controls { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; margin: 0.2rem 0 0.7rem; }
+/* Die Schalter blenden nur aus, gerechnet ist alles. Ohne JavaScript gelten die
+   Standardwerte der data-Attribute am Block (beide an). */
+.coalitions-block[data-brandmauer="1"] .coalition[data-afd="true"],
+.coalitions-block[data-unvereinbar="1"] .coalition[data-union-linke="true"] { display: none; }
+.coalition-note { margin-top: 0.6rem; }
 
 /* ---------------------------------------------------------------- Tabellen */
 

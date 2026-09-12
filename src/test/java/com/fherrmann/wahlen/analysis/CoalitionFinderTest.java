@@ -13,7 +13,8 @@ class CoalitionFinderTest {
     private final CoalitionFinder finder = new CoalitionFinder();
 
     private static final Map<Integer, String> SHORTCUTS = Map.of(
-            1, "CDU/CSU", 2, "SPD", 3, "FDP", 4, "Grüne", 5, "Linke", 7, "AfD");
+            1, "CDU/CSU", 2, "SPD", 3, "FDP", 4, "Grüne", 5, "Linke", 7, "AfD",
+            8, "BSW", 9, "Freie Wähler");
 
     private static Map<Integer, Integer> seats(Object... pairs) {
         Map<Integer, Integer> map = new LinkedHashMap<>();
@@ -58,6 +59,41 @@ class CoalitionFinderTest {
                 .contains("Ampel");
         assertThat(names(finder.find(seats(1, 30, 4, 25, 3, 25, 2, 20), 51, SHORTCUTS)))
                 .contains("Jamaika");
+        assertThat(names(finder.find(seats(1, 30, 2, 25, 4, 20, 7, 25), 51, SHORTCUTS)))
+                .contains("Kenia");
+        assertThat(names(finder.find(seats(1, 30, 2, 25, 3, 20, 7, 25), 51, SHORTCUTS)))
+                .contains("Deutschland-Koalition");
+    }
+
+    @Test
+    @DisplayName("kennt auch Bahamas, Simbabwe und Brombeer")
+    void knowsTheNewerNames() {
+        assertThat(names(finder.find(seats(1, 30, 7, 25, 3, 10, 2, 35), 51, SHORTCUTS)))
+                .contains("Bahamas");
+        assertThat(names(finder.find(seats(1, 20, 2, 20, 4, 15, 3, 10, 7, 35), 51, SHORTCUTS)))
+                .contains("Simbabwe");
+        assertThat(names(finder.find(seats(1, 30, 2, 15, 8, 15, 7, 40), 51, SHORTCUTS)))
+                .contains("Brombeer");
+    }
+
+    @Test
+    @DisplayName("CDU, CSU und CDU/CSU sind fuer die Namen dasselbe Lager")
+    void treatsUnionVariantsAlike() {
+        Map<Integer, String> land = Map.of(1, "CDU", 2, "SPD", 4, "Grüne", 3, "FDP");
+        assertThat(names(finder.find(seats(1, 45, 2, 40, 4, 15), 51, land)))
+                .contains("Große Koalition", "Kenia");
+        Map<Integer, String> bayern = Map.of(1, "CSU", 4, "Grüne", 3, "FDP", 2, "SPD");
+        assertThat(names(finder.find(seats(1, 40, 4, 25, 3, 20, 2, 15), 51, bayern)))
+                .contains("Jamaika");
+    }
+
+    @Test
+    @DisplayName("Zweierbuendnisse heissen nach ihren Farben, die groessere zuerst")
+    void colourNamesFollowSize() {
+        assertThat(names(finder.find(seats(4, 45, 1, 40, 2, 15), 51, SHORTCUTS)))
+                .contains("Grün-Schwarz");
+        assertThat(names(finder.find(seats(1, 45, 4, 40, 2, 15), 51, SHORTCUTS)))
+                .contains("Schwarz-Grün");
     }
 
     @Test
@@ -75,10 +111,56 @@ class CoalitionFinderTest {
     }
 
     @Test
+    @DisplayName("SPD, Gruene und Linke sitzen nie mit der AfD in einem Buendnis")
+    void neverPairsAfdWithSpdGreensOrLeft() {
+        List<CoalitionFinder.Coalition> found =
+                finder.find(seats(7, 30, 2, 25, 1, 21, 4, 15, 5, 10), 51, SHORTCUTS);
+
+        assertThat(found).isNotEmpty();
+        assertThat(found).noneSatisfy(c -> {
+            assertThat(c.partyIds()).contains(7);
+            assertThat(c.partyIds()).containsAnyOf(2, 4, 5);
+        });
+        // Union + AfD bleibt drin: das ist Sache des Schalters, nicht der Rechnung.
+        assertThat(found).anySatisfy(c -> assertThat(c.partyIds()).containsExactlyInAnyOrder(1, 7));
+    }
+
+    @Test
+    @DisplayName("markiert AfD-Beteiligung und Union+Linke fuer die Schalter")
+    void flagsFirewallCases() {
+        List<CoalitionFinder.Coalition> found =
+                finder.find(seats(1, 35, 7, 25, 5, 20, 2, 20), 51, SHORTCUTS);
+
+        CoalitionFinder.Coalition schwarzBlau = byParties(found, 1, 7);
+        assertThat(schwarzBlau.afd()).isTrue();
+        assertThat(schwarzBlau.unionLinke()).isFalse();
+
+        CoalitionFinder.Coalition unionLinke = byParties(found, 1, 5);
+        assertThat(unionLinke.afd()).isFalse();
+        assertThat(unionLinke.unionLinke()).isTrue();
+
+        CoalitionFinder.Coalition groko = byParties(found, 1, 2);
+        assertThat(groko.afd()).isFalse();
+        assertThat(groko.unionLinke()).isFalse();
+    }
+
+    @Test
+    @DisplayName("eine absolute Mehrheit der AfD ist keine Brandmauer-Frage")
+    void singlePartyAfdIsNotFlagged() {
+        List<CoalitionFinder.Coalition> found = finder.find(seats(7, 60, 1, 40), 51, SHORTCUTS);
+
+        assertThat(found).anySatisfy(c -> {
+            assertThat(c.partyIds()).containsExactly(7);
+            assertThat(c.afd()).isFalse();
+        });
+    }
+
+    @Test
     @DisplayName("vergibt keinen Namen zweimal in derselben Liste")
     void namesStayUnique() {
-        // AfD+Gruene+SPD und AfD+Gruene+Linke ergaeben beide "Blau-Gruen-Rot".
-        List<String> found = names(finder.find(seats(7, 30, 4, 25, 2, 25, 5, 20), 51, SHORTCUTS));
+        // Union+SPD+Freie Waehler und Union+Linke+Freie Waehler ergaeben beide
+        // "Schwarz-Rot-Orange".
+        List<String> found = names(finder.find(seats(1, 30, 2, 20, 5, 20, 9, 15, 4, 15), 51, SHORTCUTS));
 
         assertThat(found).doesNotHaveDuplicates();
         assertThat(found).anySatisfy(n -> assertThat(n).contains("Linke"));
@@ -106,5 +188,12 @@ class CoalitionFinderTest {
 
     private static List<String> names(List<CoalitionFinder.Coalition> coalitions) {
         return coalitions.stream().map(CoalitionFinder.Coalition::name).toList();
+    }
+
+    private static CoalitionFinder.Coalition byParties(List<CoalitionFinder.Coalition> coalitions,
+                                                       Integer... ids) {
+        return coalitions.stream()
+                .filter(c -> c.partyIds().size() == ids.length && c.partyIds().containsAll(List.of(ids)))
+                .findFirst().orElseThrow();
     }
 }

@@ -66,5 +66,58 @@
   </span>
 </div>
 
+<!-- Koalitionsliste mit den beiden Schaltern.
+     Buendnisse von SPD, Gruenen oder Linken mit der AfD kommen gar nicht erst an
+     (CoalitionFinder). Was die Union ausschliesst, blendet CSS ueber die
+     data-Attribute am Block aus; app.js haelt Kaestchen, Attribute und Zaehlung
+     zusammen, auch fuer einen nachgeladenen Wahlabend-Block. Ohne JavaScript
+     gilt der Standard: beide Schalter an. -->
+<div th:fragment="coalitions(coalitions, parties)" class="coalitions-block"
+     data-brandmauer="1" data-unvereinbar="1">
+  <div class="coalition-controls">
+    <label class="toggle">
+      <input type="checkbox" class="firewall-toggle" data-rule="afd" checked> Brandmauer gegen die AfD
+    </label>
+    <label class="toggle">
+      <input type="checkbox" class="firewall-toggle" data-rule="linke" checked> Unvereinbarkeitsbeschluss gegen die Linke
+    </label>
+  </div>
+  <ul class="coalitions" th:if="${!coalitions.isEmpty()}">
+    <li class="coalition" th:each="c : ${coalitions}"
+        th:attr="data-afd=${c.afd},data-union-linke=${c.unionLinke}">
+      <span class="keys">
+        <i th:each="pid : ${c.partyIds}"
+           th:with="p=${#lists.toList(parties).?[id == __${pid}__][0]}"
+           th:style="'background:' + ${p != null ? p.colorLight : '#8A8F98'}"
+           th:attr="data-color-light=${p != null ? p.colorLight : '#8A8F98'},
+                    data-color-dark=${p != null ? p.colorDark : '#9BA1A9'}"></i>
+      </span>
+      <span class="nm" th:text="${c.name}">Koalition</span>
+      <span class="who">
+        <th:block th:each="pid,it : ${c.partyIds}"
+                  th:with="p=${#lists.toList(parties).?[id == __${pid}__][0]}">
+          <span th:text="${p != null ? p.shortcut : pid}">X</span><th:block
+            th:if="${!it.last}"> + </th:block>
+        </th:block>
+      </span>
+      <span class="seats">
+        <b th:text="${c.seats}">0</b> Sitze
+        <span th:text="'(+' + ${c.over} + ')'">(+0)</span>
+      </span>
+    </li>
+  </ul>
+  <p class="hint coalition-empty" hidden>
+    Mit den Schaltern oben bleibt keine Mehrheit übrig.
+  </p>
+  <p class="hint" th:if="${coalitions.isEmpty()}">
+    Keine rechnerische Mehrheit, jedenfalls keine ohne ein Bündnis von SPD, Grünen
+    oder Linken mit der AfD.
+  </p>
+  <p class="hint coalition-note">
+    Bündnisse von SPD, Grünen oder Linken mit der AfD fehlen hier grundsätzlich. Die
+    Schalter blenden dazu aus, was die Union ausschließt<span class="hidden-count"></span>.
+  </p>
+</div>
+
 </body>
 </html>

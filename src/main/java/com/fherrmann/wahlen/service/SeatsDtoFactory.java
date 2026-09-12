@@ -101,7 +101,7 @@ public class SeatsDtoFactory {
         return coalitionFinder.find(seatsByParty, seats.majority(), shortcuts).stream()
                 .filter(CoalitionFinder.Coalition::minimal)
                 .map(c -> new Dtos.CoalitionDto(c.partyIds(), c.seats(), c.name(), c.minimal(),
-                        c.seats() - seats.majority()))
+                        c.seats() - seats.majority(), c.afd(), c.unionLinke()))
                 .toList();
     }
 
