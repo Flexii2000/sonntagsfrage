@@ -386,6 +386,19 @@ API-Feld `trend.sigmaDays` und wird im UI ausgewiesen.
 Übernehmen mit `sudo ~/services/sonntagsfrage/deploy/setup-sonntagsfrage.sh` —
 das Skript ist idempotent, kopiert das Snippet neu und lädt nginx.
 
+Ob der Live-Stand hinterherhinkt, sieht man ohne sudo:
+
+```bash
+diff ~/services/sonntagsfrage/deploy/nginx-wahlen.conf /etc/nginx/snippets/wahlen.conf
+curl -sI https://fherrmann.com/wahlen/js/app.js | grep -i cache-control   # muss no-cache liefern
+```
+
+`update-sonntagsfrage.sh` macht den Vergleich seit 2026-09-12 nach jedem Deploy
+selbst und warnt laut. Anlass: das Live-Snippet stand noch auf `expires 1h`,
+obwohl das Repo längst `no-cache` hatte — nach dem Deploy der
+Koalitionsschalter traf eine Stunde lang neues HTML auf altes JavaScript, die
+Schalter wirkten kaputt, bis der Browser neu lud.
+
 Die statischen Dateien stehen bewusst auf `no-cache` (immer revalidieren,
 in der Praxis 304 ohne Daten). Ein festes `max-age` wäre hier falsch: die
 Dateinamen tragen keine Versionskennung, weil `app.js` das Modul `chart.js`
