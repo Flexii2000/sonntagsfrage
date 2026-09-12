@@ -15,8 +15,9 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.Locale;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
@@ -60,6 +61,9 @@ public class PageController {
         this.reports = reports;
     }
 
+    /** Weiter als das schaut der Wahlkalender nicht voraus. */
+    private static final long CALENDAR_HORIZON_DAYS = 1500;
+
     @GetMapping("/")
     public String index(Model model) {
         Dtos.FeaturedDto featured = view.featured();
@@ -68,9 +72,18 @@ public class PageController {
         Dtos.ParliamentDetailDto hero = featured.slug() == null ? null
                 : view.detail(featured.slug(), null, null).orElse(null);
 
+        // Der Wahlkalender in Terminreihenfolge, die naechste Wahl zuoberst. Die
+        // Parlamentsuebersicht darunter behaelt ihre feste Reihenfolge.
+        List<Dtos.ParliamentSummaryDto> calendar = overview.stream()
+                .filter(p -> p.nextElection() != null && p.nextElection().daysAway() != null
+                        && p.nextElection().daysAway() <= CALENDAR_HORIZON_DAYS)
+                .sorted(Comparator.comparing(p -> p.nextElection().date()))
+                .toList();
+
         model.addAttribute("featured", featured);
         model.addAttribute("hero", hero);
         model.addAttribute("overview", overview);
+        model.addAttribute("calendar", calendar);
         model.addAttribute("waJson", hero != null && hero.wahlabend() != null ? json(hero.wahlabend()) : "null");
         model.addAttribute("bootstrap", json(Map.of(
                 "featured", featured,

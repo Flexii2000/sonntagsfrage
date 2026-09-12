@@ -75,7 +75,7 @@
     </header>
     <div class="card">
       <ul class="calendar">
-        <li th:each="p : ${overview}" th:if="${p.nextElection != null and p.nextElection.daysAway <= 1500}">
+        <li th:each="p : ${calendar}">
           <span class="date" th:text="${#temporals.format(p.nextElection.date, 'd. MMM yyyy')}">Datum</span>
           <a th:href="@{/{slug}(slug=${p.parliament.slug})}" th:text="${p.parliament.electionName}">Wahl</a>
           <span class="badge soon" th:if="${p.nextElection.daysAway <= 21}">demnächst</span>

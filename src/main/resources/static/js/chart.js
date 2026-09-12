@@ -21,6 +21,23 @@ export const darkMode = () =>
 export const partyColor = (party) =>
   (darkMode() ? party.colorDark : party.colorLight) || '#8A8F98';
 
+/* Sehr dunkle Farben - die Union ist seit 2026-09-12 auch im Dark Mode schwarz -
+ * gehen auf dunklem Grund unter. Sie bekommen deshalb einen hellen Saum: Linien
+ * ein Halo darunter, Punkte und Farbfelder eine Hairline. Entscheidend ist die
+ * relative Leuchtdichte der Farbe, nicht der Parteiname. */
+export const HALO = 'rgba(255, 255, 255, 0.55)';
+export function needsHalo(color) {
+  if (!darkMode()) return false;
+  const m = /^#([0-9a-f]{6})$/i.exec(String(color).trim());
+  if (!m) return false;
+  const n = parseInt(m[1], 16);
+  const lin = (c) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+  const lum = 0.2126 * lin(n >> 16) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+  return lum < 0.05;
+}
+export const swatchStyle = (color) =>
+  `background:${color}` + (needsHalo(color) ? `;box-shadow:inset 0 0 0 1px ${HALO}` : '');
+
 export function fmt(value, digits = 1) {
   if (value === null || value === undefined || Number.isNaN(value)) return '–';
   return value.toFixed(digits).replace('.', ',');
@@ -232,7 +249,7 @@ function draw(svg, tooltip, host, data, state) {
         const day = dayOf(poll.effective);
         if (day < x0 || day > x1) continue;
         el('circle', { cx: X(day), cy: Y(v), r: 2.6, fill: color,
-                       class: 'series-dot' }, dotsG);
+                       class: needsHalo(color) ? 'series-dot dot-halo' : 'series-dot' }, dotsG);
       }
     }
   }
@@ -251,6 +268,7 @@ function draw(svg, tooltip, host, data, state) {
   for (const s of visible) {
     const party = partyById.get(s.partyId) || {};
     const color = partyColor(party);
+    const halo = needsHalo(color);
 
     // Zusammenhaengende Abschnitte mit Daten sammeln.
     const runs = [];
@@ -270,7 +288,7 @@ function draw(svg, tooltip, host, data, state) {
       el('line', {
         x1: from.x.toFixed(1), y1: from.y.toFixed(1),
         x2: to.x.toFixed(1), y2: to.y.toFixed(1),
-        stroke: color, 'stroke-width': 1.4, 'stroke-dasharray': '2 4',
+        stroke: halo ? HALO : color, 'stroke-width': 1.4, 'stroke-dasharray': '2 4',
         'stroke-linecap': 'round', opacity: 0.5,
       }, linesG);
     }
@@ -279,12 +297,14 @@ function draw(svg, tooltip, host, data, state) {
       // Ein einzelner Punkt ergibt keinen Pfad — als Marke zeichnen, sonst
       // verschwindet eine isolierte Umfrage komplett.
       if (points.length === 1) {
-        el('circle', { cx: points[0].x, cy: points[0].y, r: 2.4, fill: color }, linesG);
+        el('circle', { cx: points[0].x, cy: points[0].y, r: 2.4, fill: color,
+                       stroke: halo ? HALO : null, 'stroke-width': halo ? 1 : null }, linesG);
         continue;
       }
       const d = points
         .map((pt, i) => `${i ? 'L' : 'M'}${pt.x.toFixed(1)},${pt.y.toFixed(1)}`)
         .join('');
+      if (halo) el('path', { d, stroke: HALO, class: 'series-halo' }, linesG);
       el('path', {
         d, stroke: color, class: 'series-line',
         'stroke-dasharray': state.patterns ? dashFor(s.partyId) : null,
@@ -293,7 +313,7 @@ function draw(svg, tooltip, host, data, state) {
 
     const last = runs[runs.length - 1];
     const lastPoint = last[last.length - 1];
-    ends.push({ partyId: s.partyId, shortcut: party.shortcut || '?', color, ...lastPoint });
+    ends.push({ partyId: s.partyId, shortcut: party.shortcut || '?', color, halo, ...lastPoint });
   }
 
   // Die Seite blendet daraufhin den erklaerenden Hinweis ein.
@@ -323,13 +343,13 @@ function draw(svg, tooltip, host, data, state) {
     // rechten Rand. In Laendern, in denen seit Monaten nicht mehr befragt
     // wurde, endet die Kurve sichtbar frueh, statt Aktualitaet vorzutaeuschen.
     el('circle', { cx: e.x, cy: trueY, r: 3.5, fill: e.color,
-                   stroke: surface, 'stroke-width': 2 }, labelsG);
+                   stroke: e.halo ? HALO : surface, 'stroke-width': 2 }, labelsG);
     if (Math.abs(e.y - trueY) > MAX_SHIFT) continue;
 
     const lx = e.x + 7;
     if (Math.abs(e.y - trueY) > 1.5 || e.x < pad.left + plotW - 1) {
       el('line', { x1: e.x + 3.5, y1: trueY, x2: lx - 2, y2: e.y,
-                   stroke: e.color, class: 'leader' }, labelsG);
+                   stroke: e.halo ? HALO : e.color, class: 'leader' }, labelsG);
     }
     const t = el('text', { x: lx, y: e.y + 3.8, class: 'end-label',
                            fill: cssVar('--text', '#1d1d1f') }, labelsG);
@@ -372,7 +392,7 @@ function draw(svg, tooltip, host, data, state) {
       const color = partyColor(party);
       rows.push({ shortcut: party.shortcut || '?', v, color });
       el('circle', { cx, cy: Y(v), r: 3.6, fill: color,
-                     stroke: surface, 'stroke-width': 2 }, hoverDots);
+                     stroke: needsHalo(color) ? HALO : surface, 'stroke-width': 2 }, hoverDots);
     }
     rows.sort((a, b) => b.v - a.v);
 
@@ -380,7 +400,7 @@ function draw(svg, tooltip, host, data, state) {
     tooltip.innerHTML =
       `<div class="tt-date">${fmtDate(data.dates[idx], 'long')}</div>` +
       rows.map((r) =>
-        `<div class="tt-row"><span class="key" style="background:${r.color}"></span>` +
+        `<div class="tt-row"><span class="key" style="${swatchStyle(r.color)}"></span>` +
         `<span class="nm">${r.shortcut}</span><span class="vl">${fmt(r.v)} %</span></div>`).join('');
     tooltip.dataset.visible = 'true';
 
@@ -465,6 +485,7 @@ export function sparkline(svg, data) {
       const party = partyById.get(s.partyId);
       if (!party) continue;
       const color = partyColor(party);
+      const halo = needsHalo(color);
 
       // Gleiche Logik wie im grossen Chart: Luecken werden gestrichelt
       // ueberbrueckt statt die Linie abreissen zu lassen.
@@ -481,7 +502,7 @@ export function sparkline(svg, data) {
         const to = runs[i][0];
         el('line', { x1: from.x.toFixed(1), y1: from.y.toFixed(1),
                      x2: to.x.toFixed(1), y2: to.y.toFixed(1),
-                     stroke: color, 'stroke-width': 1.2,
+                     stroke: halo ? HALO : color, 'stroke-width': 1.2,
                      'stroke-dasharray': '1.5 2.5', opacity: 0.5 }, svg);
       }
 
@@ -490,6 +511,7 @@ export function sparkline(svg, data) {
         const d = points
           .map((pt, i) => `${i ? 'L' : 'M'}${pt.x.toFixed(1)},${pt.y.toFixed(1)}`)
           .join('');
+        if (halo) el('path', { d, stroke: HALO, class: 'spark-halo' }, svg);
         el('path', { d, stroke: color, fill: 'none',
                      'stroke-width': 1.6, 'stroke-linejoin': 'round',
                      'stroke-linecap': 'round' }, svg);
@@ -579,7 +601,7 @@ export function seatArc(svg, entries, parties, majority) {
         cy: cy - Math.sin(angle) * r,
         r: dotR,
         fill: partyColor(party),
-        class: 'seat',
+        class: needsHalo(partyColor(party)) ? 'seat seat-halo' : 'seat',
       }, svg);
       const title = el('title', {}, dot);
       title.textContent = party.shortcut;

@@ -2,7 +2,7 @@
  * Charts. Ohne JavaScript bleiben Tabellen, Zahlen und Balken vollstaendig
  * lesbar — die Charts sind eine Ergaenzung, kein Zugangstor zu den Werten. */
 
-import { trendChart, sparkline, seatArc, partyColor, darkMode, fmt, fmtDate } from './chart.js';
+import { trendChart, sparkline, seatArc, partyColor, darkMode, needsHalo, swatchStyle, HALO, fmt, fmtDate } from './chart.js';
 
 const boot = (() => {
   const node = document.getElementById('bootstrap');
@@ -25,6 +25,7 @@ function applyThemeColors() {
     if (node.classList.contains('bar-fill') || node.classList.contains('key')
         || node.tagName === 'I') {
       node.style.background = color;
+      node.style.boxShadow = needsHalo(color) ? `inset 0 0 0 1px ${HALO}` : '';
     }
   });
 }
@@ -86,7 +87,7 @@ function buildLegend(container, detail, chart, hidden) {
     button.type = 'button';
     button.setAttribute('aria-pressed', String(!hidden.has(party.id)));
     button.innerHTML =
-      `<span class="key" style="background:${partyColor(party)}"></span>` +
+      `<span class="key" style="${swatchStyle(partyColor(party))}"></span>` +
       `<span>${party.shortcut}</span>` +
       (value === undefined ? '' : `<span class="val">${fmt(value)}</span>`);
     button.addEventListener('click', () => {

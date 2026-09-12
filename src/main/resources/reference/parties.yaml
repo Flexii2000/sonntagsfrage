@@ -14,10 +14,16 @@
 #   - eine Tabellenansicht als vollwertige Alternative,
 #   - optional (Schalter "Muster") zusaetzliche Strichmuster.
 #
-# Die Dark-Mode-Werte sind eigenstaendig gewaehlt, keine Aufhellung:
-# Schwarz (CDU/CSU) und Gelb (FDP) verschwinden sonst. Sie bleiben so nah wie
-# moeglich an der Original-CI und werden nur so weit angehoben, dass die Linie
-# auf dunklem Grund nicht verschwindet.
+# Die Dark-Mode-Werte sind eigenstaendig gewaehlt, keine Aufhellung: Gelb
+# (FDP) verschwindet sonst. Sie bleiben so nah wie moeglich an der Original-CI
+# und werden nur so weit angehoben, dass die Linie auf dunklem Grund nicht
+# verschwindet.
+#
+# Ausnahme seit 2026-09-12 (Felix): die Union bleibt auch im Dark Mode
+# schwarz. Damit Schwarz auf dunklem Grund nicht untergeht, bekommen sehr
+# dunkle Farben in chart.js einen hellen Saum (Halo unter der Linie, Hairline
+# um Punkte und Farbfelder) - entschieden ueber die Leuchtdichte der Farbe,
+# nicht ueber den Parteinamen.
 #
 # "spectrum" ordnet die Parteien fuer den Sitzbogen von links nach rechts —
 # die uebliche Sitzordnung deutscher Parlamente. Das ist eine Konvention, keine
@@ -30,17 +36,17 @@
 parties:
   - shortcut: "CDU/CSU"
     light: "#2C2C2C"
-    dark: "#E4E4E7"
+    dark: "#000000"
     order: 10
     spectrum: 70
   - shortcut: "CDU"
     light: "#2C2C2C"
-    dark: "#E4E4E7"
+    dark: "#000000"
     order: 11
     spectrum: 71
   - shortcut: "CSU"
     light: "#2C2C2C"
-    dark: "#E4E4E7"
+    dark: "#000000"
     order: 12
     spectrum: 72
   - shortcut: "SPD"
