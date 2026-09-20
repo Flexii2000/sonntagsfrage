@@ -31,7 +31,8 @@ Mode kennt und auf Hover verrät, was an einem bestimmten Tag Sache war.
 - **Wahlabend-Modus**: ab 18 Uhr am Wahltag Prognose, Hochrechnungen und der
   Stand der Landeswahlleitung im Minutentakt, mit Sitzen, Mehrheiten und dem
   Vergleich zu Vorwahl und Umfragen — bis das amtliche Ergebnis da ist, und
-  danach als Archiv des Abends
+  danach als Archiv des Abends. Die Zahlen der Sender trägt am Wahlabend ein
+  Claude-Code-Agent auf dem Server ein (`deploy/wahlabend-agent.sh`)
 - **Offene JSON-API** unter `/wahlen/api/`
 
 ## Datenquelle

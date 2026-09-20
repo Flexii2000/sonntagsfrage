@@ -115,10 +115,39 @@ elections:
     date: 2026-09-20
     status: SCHEDULED
     source: https://www.wahlen-berlin.de/
-    # Wahlabend: Die Landeswahlleitung nennt Format und URL ihrer Ergebnisdaten
-    # erst am Wahlabend. Sobald eine CSV mit Landeszeile bekannt ist, hier ein
-    # "live:"-Block nach dem Muster von Mecklenburg-Vorpommern — bis dahin
-    # Handeingabe ueber /wahlen/berlin/wahlabend/eintragen.
+    # Wahlabend: Die Landeswahlleitung zeigte ihr Format erst am Wahlabend
+    # (Download-Seite unter .../Afspraes/AGH/downloads.html). Eine Datei mit
+    # allen Ebenen; die Landeszeile ist Gebietsart "Bundesland" (Adresse
+    # GI9900), Zweitstimme = StimmArt 2. Parteien stehen als P01..P99 ohne
+    # Namen in der Kopfzeile — die Zuordnung liefert die Datensatzbeschreibung
+    # (DSB/DSB_Datenexport_AGH2026_Zweitstimme_A_BE.csv), deshalb "aliases".
+    # Datum (JJ.MM.TT) und Zeit liegen in zwei Spalten, die der Adapter nicht
+    # zusammensetzen kann; es gilt Last-Modified. Sitze liefert die Datei nicht.
+    # UTF-8 mit BOM, CRLF.
+    live:
+      - type: csv
+        label: Landeswahlleiter Berlin
+        url: https://www.wahlen-berlin.de/wahlen/BE2026/Afspraes/AGH/Datenexport_AGH2026_Zweitstimme_A_BE.csv
+        row: { "Gebietsart": "Bundesland", "StimmArt": "2" }
+        validVotes: "Gueltig"
+        voters: "Waehler"
+        eligible: "WberIns"
+        turnout: "Waehlerp"
+        partyPattern: "^(P\\d\\d)$"
+        aliases:
+          "P01": "CDU"
+          "P02": "SPD"
+          "P03": "Grüne"
+          "P04": "Linke"
+          "P05": "AfD"
+          "P06": "FDP"
+          "P07": "Tierschutzpartei"
+          "P08": "Die PARTEI"
+          "P09": "Volt"
+          "P24": "BSW"
+          # alle weiteren P-Spalten: Kleinparteien, zaehlen zu Sonstige
+        districtsTotal: "AnzWbez"
+        districtsCounted: "AusWbez"
 
   # ------------------------------------------------------------- Brandenburg
   - parliament: brandenburg

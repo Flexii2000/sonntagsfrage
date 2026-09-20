@@ -86,6 +86,47 @@ class CsvResultSourceTest {
                 ZonedDateTime.of(2026, 9, 20, 19, 45, 0, 0, WahlabendClock.BERLIN).toInstant());
     }
 
+    /**
+     * Aufbau der Berliner Datei (AGH 2026): BOM vor der Kopfzeile, Parteien als
+     * P01..P99 ohne Namen, Prozentspalten daneben (P01p), Landeszeile ist
+     * Gebietsart "Bundesland". Auf die ersten Spalten gekuerzt.
+     */
+    private static final String BERLIN = "\uFEFF" + """
+            Adresse;StimmArt;Gebietsart;Gebietsname;Nummer;OstWest;Datum;Zeit;AnzWbez;AusWbez;AusWbezp;WberIns;Waehler;Waehlerp;Gueltig;Gueltigp;Unguelt;Ungueltp;P01;P01p;P02;P02p;P03;P03p;P04;P04p;P05;P05p;P06;P06p;P24;P24p
+            AI0101;2;Abgeordnetenhauswahlkreis;Mitte 1;0101;X;26.09.20;22:19:09;51;48;94,1;32501;23987;78,8;23841;99,4;146;0,6;4574;19,2;2572;10,8;5686;23,8;6337;26,6;1613;6,8;839;3,5;712;3,0
+            GI9900;2;Bundesland;Berlin;00;X;26.09.20;22:19:09;4114;3901;94,8;2487318;1744923;74,6;1725604;98,9;19319;1,1;324735;18,8;209723;12,2;249170;14,4;444203;25,7;275228;15,9;44033;2,6;80843;4,7
+            GI9901;2;Ost/West;Berlin-Ost;01;O;26.09.20;22:19:09;1746;1640;93,9;1051217;742431;76,0;733958;98,9;8473;1,1;107671;14,7;71291;9,7;94399;12,9;205794;28,0;149567;20,4;15246;2,1;42597;5,8
+            """;
+
+    private static LiveSourceRef berlin() {
+        return new LiveSourceRef("csv", "Landeswahlleiter Berlin", "https://example/Datenexport.csv", null,
+                Map.of("Gebietsart", "Bundesland", "StimmArt", "2"),
+                "Gueltig", "Waehler", "WberIns", "Waehlerp",
+                "^(P\\d\\d)$", null, null,
+                Map.of("P01", "CDU", "P04", "Linke", "P24", "BSW"),
+                "AnzWbez", "AusWbez", null, null,
+                null, null, null);
+    }
+
+    @Test
+    @DisplayName("Berlin: BOM vor dem Kopf, Landeszeile per Gebietsart, P-Spalten als Parteien, Prozentspalten nicht")
+    void parsesBerlin() {
+        Instant lastModified = Instant.parse("2026-09-20T20:19:11Z");
+        CsvResultSource.Parsed parsed = CsvResultSource.parseResults(BERLIN, berlin(), lastModified);
+
+        assertThat(parsed.percent().get("P04")).isCloseTo(25.74, within(0.01));
+        assertThat(parsed.percent().get("P01")).isCloseTo(18.82, within(0.01));
+        assertThat(parsed.percent().get("P24")).isCloseTo(4.69, within(0.01));
+        assertThat(parsed.percent()).doesNotContainKey("P01p").doesNotContainKey("Gueltigp");
+        assertThat(parsed.turnout()).isCloseTo(74.6, within(0.01));
+        assertThat(parsed.districtsCounted()).isEqualTo(3901);
+        assertThat(parsed.districtsTotal()).isEqualTo(4114);
+        assertThat(parsed.complete()).isFalse();
+        assertThat(parsed.timestamp()).isEqualTo(lastModified);
+        // Die Spaltennamen sagen nichts — erst die aliases aus elections.yaml machen Parteien daraus.
+        assertThat(PartyAliases.canonical("P04", berlin().aliases())).isEqualTo("Linke");
+    }
+
     @Test
     @DisplayName("MV: alle Wahlbezirke erfasst = vollstaendig")
     void detectsCompleteCount() {

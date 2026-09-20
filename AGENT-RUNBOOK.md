@@ -3,7 +3,7 @@
 > Betriebshandbuch für Agenten und für Felix in sechs Monaten.
 > Ergänzt `~/Server-Projects/SERVER-CONTEXT.md`, dupliziert es nicht.
 >
-> Stand: 2026-09-07
+> Stand: 2026-09-20
 
 ---
 
@@ -221,7 +221,7 @@ die Hero-Karte rechts zeigt dann den aktuellen Stand statt der Umfragen.
 | Was | Weg | Wer |
 |---|---|---|
 | Zwischenstand, vorläufiges Ergebnis, Sitze der **Landeswahlleitung** | automatisch: `WahlabendPoller` liest die CSV, die in `elections.yaml` unter `live:` steht — in den ersten 36 h nach 18 Uhr jede Minute, danach alle 15 min, immer mit ETag/If-Modified-Since. Unveränderte Datei = kein neuer Stand (Fingerabdruck) | Code |
-| **18-Uhr-Prognose und Hochrechnungen** von ARD (infratest dimap) und ZDF (Forschungsgruppe Wahlen) | von Hand: Formular **`/wahlen/<slug>/wahlabend/eintragen`** (Handy reicht; Token wird im Browser gemerkt) oder `deploy/wahlabend.sh` | Felix |
+| **18-Uhr-Prognose und Hochrechnungen** von ARD (infratest dimap) und ZDF (Forschungsgruppe Wahlen) | automatisch seit 2026-09-20: der **Wahlabend-Agent** (unten) liest sie aus den Livetickern und trägt sie alle 10 min über `deploy/wahlabend.sh` ein. Von Hand geht weiter: Formular **`/wahlen/<slug>/wahlabend/eintragen`** (Handy reicht; Token wird im Browser gemerkt) oder `deploy/wahlabend.sh` | Agent, Felix prüft |
 
 Kein Stand wird je überschrieben — nur angelegt oder gelöscht. Maßgeblich ist
 ein vorläufiges Ergebnis, sonst der jüngste Stand (`WahlabendService.pickLatest`).
@@ -230,22 +230,70 @@ ein vorläufiges Ergebnis, sonst der jüngste Stand (`WahlabendService.pickLates
 Server (Modus 600). `setup-sonntagsfrage.sh` trägt es nach, wenn es fehlt.
 Ohne Token ist das Eintragen gesperrt, nicht offen.
 
+### Wahlabend-Agent (seit 2026-09-20)
+
+Ein Cron-Eintrag ruft **täglich um 17:55** `~/scripts/wahlabend-agent.sh start`
+auf (Symlink auf `deploy/wahlabend-agent.sh` im Repo). Das Skript fragt die
+API, ob heute irgendwo gewählt wird (`/api/parliaments/<slug>/wahlabend` →
+`electionDate` = heute); wenn nicht, endet es still. Sonst startet es die
+tmux-Session **`wahlabend-agent`**, die ab 18:01 **alle zehn Minuten** einen
+kopflosen Claude-Code-Lauf (`claude -p`) ausführt — bis 01:00, oder früher,
+sobald jede Wahl des Tages ein vorläufiges Ergebnis hat.
+
+Jeder Lauf ist zustandslos: er liest, was die API schon hat, sucht die
+jüngsten ARD/ZDF-Stände (zuerst koalitions-rechner.de, das den ganzen Abend
+tabelliert; dann die Liveticker von zdfheute und der ARD-Anstalt) und trägt
+nur ein, was fehlt. Der Prompt steht in `deploy/wahlabend-agent-prompt.md`,
+Seiten holt er mit `deploy/wahlabend-text.py` (curl mit Browser-Kennung plus
+Textextraktion — Claude Codes eigener WebFetch ist auf ARD-Seiten gesperrt).
+
+**Was er darf:** lesen, `curl`/`jq` gegen die API, das Textskript und
+`deploy/wahlabend.sh`. Mehr nicht — die Werkzeugliste steht als
+`ALLOWED_TOOLS` im Skript, alles andere lehnt Claude Code im kopflosen Modus
+ohne Rückfrage ab. Dateien ändern, deployen, Container, Löschen: geht nicht.
+Er läuft in `~/Server-Projects`, damit dort `CLAUDE.md` und die `.env`-Sperre
+gelten, und nutzt den Claude-Max-Login des Servers — **„Login abgelaufen"
+(SERVER-CONTEXT.md) trifft ihn genauso** wie die Remote-Control-Session.
+
+```bash
+~/scripts/wahlabend-agent.sh status                  # Session? Cron? Wahl heute? letzte Logzeilen
+~/scripts/wahlabend-agent.sh run-once berlin         # ein Lauf im Vordergrund (Test)
+~/scripts/wahlabend-agent.sh start --force berlin    # Session außerhalb des Crons starten
+~/scripts/wahlabend-agent.sh stop
+tail -f ~/scripts/wahlabend-agent.log                # jeder Lauf endet mit einer Zusammenfassung
+```
+
+Cron-Zeile (`crontab -l`):
+
+```
+55 17 * * * /home/flexii/scripts/wahlabend-agent.sh start >> /home/flexii/scripts/wahlabend-agent.log 2>&1
+```
+
 ### Checkliste am Wahltag
 
 1. **Vormittags:** `live:`-Block der Wahl in `elections.yaml` prüfen —
    antwortet die CSV-URL (`curl -sI <url>`), stimmt die Kopfzeile noch mit
-   den konfigurierten Spaltennamen überein? Mecklenburg-Vorpommern kündigt an,
-   die endgültige URL erst in der Wahlwoche zu nennen. Änderung → committen,
-   pushen, `~/scripts/update-sonntagsfrage.sh`.
-2. **Wahl ohne `live:`-Block** (Berlin 2026): sobald die Landeswahlleitung ihre
-   Datei zeigt, den Block nach dem MV-Muster anlegen — oder den Abend komplett
-   von Hand füttern.
-3. **18:00:** Prognose ARD und ZDF eintippen (Formular). Uhrzeit `18:00`,
-   Quelle aus der Vorschlagsliste, sieben Zahlen, fertig. "Sonstige" darf
-   fehlen, der Rest bis 100 wird ergänzt.
-4. **Abend:** Hochrechnungen nach Bedarf nachtragen; die Landeswahlleitung
-   kommt von selbst und steht als "Auszählungsstand" mit "x von y
-   Wahlbezirken" da.
+   den konfigurierten Spaltennamen überein, **und ist `Last-Modified` vom
+   Wahltag?** MV 2026 lieferte unter der vorab genannten Adresse bis in den
+   Abend die Testdatei vom August (lauter Nullen, `200 OK`) — die echten
+   Dateien lagen auf einem anderen Host (`wahlen.mvnet.de`), auf den die
+   Ergebnisseite der Landeswahlleitung weiterleitete. Also auch
+   `curl -sIL <Ergebnisseite>` ansehen. Änderung → committen, pushen,
+   `~/scripts/update-sonntagsfrage.sh`.
+2. **Wahl ohne `live:`-Block:** sobald die Landeswahlleitung ihre Datei
+   zeigt, den Block nach dem Muster von MV (Parteinamen im Kopf) oder Berlin
+   (Spalten `P01…` plus `aliases` aus der Datensatzbeschreibung) anlegen —
+   oder den Abend komplett von Hand füttern.
+3. **Vormittags auch:** `~/scripts/wahlabend-agent.sh status` — steht der
+   Cron, meldet die API die Wahl für heute, und läuft `claude -p "OK"` auf dem
+   Server ohne Login-Fehler?
+4. **18:00 und danach:** Prognose und Hochrechnungen von ARD und ZDF trägt der
+   Agent ein; die Landeswahlleitung kommt über den Poller und steht als
+   "Auszählungsstand" mit "x von y Wahlbezirken" da. Zwischendurch
+   `tail ~/scripts/wahlabend-agent.log` — meldet ein Lauf Probleme oder
+   fehlt ein Stand, per Formular nachtragen (Uhrzeit `18:00`, Quelle aus der
+   Vorschlagsliste; "Sonstige" darf fehlen, solange die Summe über 95
+   bleibt, sonst `Sonstige` = Rest bis 100 mit angeben).
 5. **Nachts:** Das vorläufige Ergebnis erkennt der Poller an
    `districtsCounted == districtsTotal` und holt dann auch die Sitze. Hat die
    Quelle keine Fortschrittsspalte (Sachsen-Anhalt), steht `kind: VORLAEUFIG`
@@ -310,7 +358,9 @@ deploy/wahlabend.sh sachsen-anhalt 2026-09-06 PROGNOSE 18:00 "ZDF / Forschungsgr
 | Falscher Stand eingetragen | Formular → "löschen" in der Liste unten, oder `DELETE` per API |
 | Formular meldet "nicht konfiguriert" | `WAHLABEND_TOKEN` fehlt in `.env` → `setup-sonntagsfrage.sh` oder von Hand, dann `docker compose up -d` |
 | Block bleibt Wochen später "live" | Das ist Absicht — bis das amtliche Ergebnis in `elections.yaml` steht (Abschnitt 8) |
-| Prozentsumme abgelehnt | Erwartet werden 95–101; Kürzel prüfen (Fehlermeldung listet die bekannten) |
+| Prozentsumme abgelehnt | Erwartet werden 95–101; Kürzel prüfen (Fehlermeldung listet die bekannten). ZDF nennt in Berlin die FDP nicht — dann `Sonstige` = 100 minus Summe mit angeben |
+| Agent trägt nichts ein | `tail -50 ~/scripts/wahlabend-agent.log`: endet ein Lauf sofort mit Login-Fehler, ist der Refresh-Token abgelaufen (SERVER-CONTEXT.md, „Login abgelaufen"); ist keine Session da, `~/scripts/wahlabend-agent.sh start --force <slug>` |
+| `wahlabend.sh` kennt kein `sourceUrl`/`note` | Direkt gegen die API (Beispiel oben) — die Felder sind optional |
 
 ### Datenmodell (V2)
 
@@ -460,9 +510,14 @@ docker compose up -d --build     # importiert beim Start alles neu, dauert ~1 mi
 
 ## 12. Offen / als Nächstes
 
-- **Berlin 2026 (20.09.):** `live:`-Block anlegen, sobald die
-  Landeswahlleitung ihr Datenformat zeigt (siehe Abschnitt 9). Bis dahin
-  Handeingabe.
+- **Wahlabend-Agent:** am 2026-09-20 erst um 22:40 eingerichtet, also nur
+  als Nachtrag im Einsatz. Beim nächsten Wahlabend von 18 Uhr an beobachten,
+  ob die Quellen tragen (koalitions-rechner.de ist die Hauptquelle — fällt
+  die weg, muss er über die Liveticker gehen) und ob die zehn Minuten Takt
+  passen.
+- **Berlin 2026, Nachtrag:** der `live:`-Block kam erst nach 22 Uhr; davor
+  wurde der Auszählungsstand einmal von Hand als "Landeswahlleitung"
+  eingetragen (22:19). Die Zeile bleibt neben den Poller-Ständen stehen.
 - **Wahlabend-Chart:** der Verlauf des Abends ist bisher nur eine Tabelle; ein
   Linienchart je Partei über die Uhrzeit wäre der nächste Schritt.
 - Fehlerspannen im Chart darstellen.
