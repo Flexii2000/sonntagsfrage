@@ -236,13 +236,16 @@ elections:
     # CSV-Dateien (ISO-8859-1, Titelzeilen vor dem Kopf). Landeszeile ist
     # Wahlkreis 99, "A" = absolute Stimmen, "2" = Zweitstimme. "Erf. Wahlbezirke"
     # gegen "Wahlbezirke insg." sagt, ob die Auszaehlung durch ist; dann gelten
-    # die Mandate aus l_mandate.csv. Laut Hinweisseite kann sich die endgueltige
-    # URL in KW 38 noch aendern — am Wahltag vor 18 Uhr einmal pruefen:
-    # https://www.laiv-mv.de/Wahlen/Landtagswahlen/2026/Ergebnisse/
+    # die Mandate aus l_mandate.csv.
+    # Am Wahlabend (2026-09-20, 22 Uhr) stellte sich heraus: die vorab
+    # angekuendigte Adresse unter laiv-mv.de/static/... blieb die Testdatei vom
+    # 25.08. mit lauter Nullen; die echten Dateien liegen auf wahlen.mvnet.de
+    # (Ziel der Weiterleitung von laiv-mv.de/Wahlen/Landtagswahlen/2026/Ergebnisse/),
+    # gleiches Format, gleiche Kopfzeile.
     live:
       - type: csv
         label: Landeswahlleiter Mecklenburg-Vorpommern
-        url: https://www.laiv-mv.de/static/LAIV/Wahlen/2-Landtagswahlen/2026/Ergebnisse/l_wahlkreise.csv
+        url: https://wahlen.mvnet.de/dateien/ergebnisse.2026/landtagswahl/csv/l_wahlkreise.csv
         charset: ISO-8859-1
         row: { "Wahlkreis": "99", "Ausgabe": "A", "Erst-/Zweitstimme": "2" }
         validVotes: "Gültige Stimmen"
@@ -256,7 +259,7 @@ elections:
         timestamp: "Berechnungsdatum"
         timestampFormat: "dd.MM.yyyy HH:mm:ss"
         seats:
-          url: https://www.laiv-mv.de/static/LAIV/Wahlen/2-Landtagswahlen/2026/Ergebnisse/l_mandate.csv
+          url: https://wahlen.mvnet.de/dateien/ergebnisse.2026/landtagswahl/csv/l_mandate.csv
           charset: ISO-8859-1
           row: { "Wahlkreis": "99", "Mandatstyp": "Insgesamt" }
           partiesAfter: "Mandatstyp"
